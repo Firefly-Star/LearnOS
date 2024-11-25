@@ -1,3 +1,6 @@
+#ifndef TIME_H
+#define TIME_H
+
 #include "types.h"
 
 struct timeVal
@@ -7,3 +10,5 @@ struct timeVal
 };
 
 struct timeVal _gettimeofday(void);
+
+#endif

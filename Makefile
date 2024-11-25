@@ -29,7 +29,8 @@ OBJS = \
   $K/kernelvec.o \
   $K/plic.o \
   $K/virtio_disk.o \
-  $K/time.o
+  $K/time.o \
+  $K/trace.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -142,7 +143,8 @@ UPROGS=\
 	$U/_zombie\
 	$U/_getyear\
 	$U/_gettimeofday\
-	$U/_sleep
+	$U/_sleep\
+	$U/_tracetest
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

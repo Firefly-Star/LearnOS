@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "time.h"
+#include "trace.h"
 
 uint64
 sys_exit(void)
@@ -116,5 +117,14 @@ sys_gettimeofday(void)
     {
     return -1;
     }
+    return 0;
+}
+
+uint64
+sys_trace(void)
+{
+    uint64 mask;
+    argaddr(0, &mask);
+    _trace(mask);
     return 0;
 }

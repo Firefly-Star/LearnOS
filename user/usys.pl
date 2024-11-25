@@ -39,3 +39,4 @@ entry("sleep");
 entry("uptime");
 entry("getyear");
 entry("gettimeofday");
+entry("trace");

@@ -1,3 +1,4 @@
+#include "kernel/types.h"
 struct stat;
 struct timeVal;
 
@@ -26,6 +27,7 @@ int uptime(void);
 int getyear(void);
 int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
+int trace(uint64); // mask of syscall to trace.
 
 // ulib.c
 int stat(const char*, struct stat*);
