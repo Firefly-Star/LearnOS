@@ -3,7 +3,7 @@
 #include "kernel/time.h"
 int main()
 {
-    trace(~0);
+    trace(TRACE_MASK(21) | TRACE_MASK(22) | TRACE_MASK(23));
     if(fork() == 0)
     {
         printf("%d\n", getyear());
@@ -13,7 +13,7 @@ int main()
         sleep(1);
         struct timeVal t;
         gettimeofday(&t);
-        printf("%lu , %lu", t.sec, t.usec);
+        printf("%lu , %lu\n", t.sec, t.usec);
     }
     exit(0);
 }

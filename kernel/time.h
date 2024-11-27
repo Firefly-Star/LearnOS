@@ -9,6 +9,6 @@ struct timeVal
     uint64 usec; // number of microseconds passed in this second
 };
 
-struct timeVal _gettimeofday(void);
+
 
 #endif

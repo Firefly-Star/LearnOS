@@ -116,4 +116,11 @@ struct proc {
   uint64 traceMask;            // 追踪的系统调用号
 };
 
+struct procQueueNode
+{
+    struct proc* p;
+    struct procQueueNode* next;
+    int want;
+};
+
 #endif

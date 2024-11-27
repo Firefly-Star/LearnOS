@@ -55,6 +55,7 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
+      p->traceMask = 0;
   }
 }
 
@@ -169,6 +170,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->traceMask = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -287,6 +289,8 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+
+  np->traceMask = p->traceMask;
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
