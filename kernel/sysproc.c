@@ -128,3 +128,12 @@ sys_trace(void)
     _trace(mask);
     return 0;
 }
+
+uint64
+sys_find(void)
+{
+    uint64 mask;
+    argaddr(0, &mask);
+    _trace(mask);
+    return 0;
+}
