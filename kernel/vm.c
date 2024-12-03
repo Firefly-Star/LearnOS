@@ -66,6 +66,8 @@ kvminithart()
 
   w_satp(MAKE_SATP(kernel_pagetable));
 
+  printf("memory mapping enabled in hart %d.\n", cpuid());
+
   // flush stale entries from the TLB.
   sfence_vma();
 }

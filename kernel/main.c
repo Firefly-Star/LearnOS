@@ -15,6 +15,7 @@ main()
     printfinit();
     printf("\n");
     printf("customed xv6 kernel is booting\n");
+    printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
     printf("\n");
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
@@ -36,6 +37,7 @@ main()
       ;
     __sync_synchronize();
     printf("hart %d starting\n", cpuid());
+    printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
     kvminithart();    // turn on paging
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts

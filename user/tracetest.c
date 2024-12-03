@@ -15,5 +15,16 @@ int main()
         gettimeofday(&t);
         printf("%lu , %lu\n", t.sec, t.usec);
     }
+    for (int i = 0;i < 100; ++i)
+    {
+        if (fork() == 0)
+        {
+            printf("fork %d", i);
+        }
+        else
+        {
+            printf("main %d", i);
+        }
+    }
     exit(0);
 }

@@ -14,6 +14,9 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+extern int
+printf(char *fmt, ...);
+
 struct run {
   struct run *next;
 };
@@ -23,11 +26,15 @@ struct {
   struct run *freelist;
 } kmem;
 
+uint64 pgNumber;
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
+  pgNumber = (PHYSTOP - (uint64)end) / PGSIZE;
+  printf("spare page number: %lu\n", pgNumber);
 }
 
 void
@@ -59,6 +66,7 @@ kfree(void *pa)
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
+  ++pgNumber;
   release(&kmem.lock);
 }
 
@@ -73,7 +81,10 @@ kalloc(void)
   acquire(&kmem.lock);
   r = kmem.freelist;
   if(r)
+  {
     kmem.freelist = r->next;
+    --pgNumber;
+  }
   release(&kmem.lock);
 
   if(r)
