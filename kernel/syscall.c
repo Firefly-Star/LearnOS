@@ -105,6 +105,7 @@ extern uint64 sys_close(void);
 extern uint64 sys_getyear(void);
 extern uint64 sys_gettimeofday(void);
 extern uint64 sys_trace(void);
+extern uint64 sys_find(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -133,6 +134,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_getyear] sys_getyear,
 [SYS_gettimeofday] sys_gettimeofday,
 [SYS_trace]   sys_trace,
+[SYS_find]   sys_find,
 };
 
 static const char* syscallNames[] = 

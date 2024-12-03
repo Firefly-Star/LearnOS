@@ -28,6 +28,7 @@ int getyear(void);
 int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
 int trace(uint64); // mask of syscall to trace.
+void find(char*, char*); // mask of syscall to trace.
 
 // ulib.c
 int stat(const char*, struct stat*);
