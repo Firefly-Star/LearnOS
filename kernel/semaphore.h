@@ -8,10 +8,15 @@ struct semaphore
 {
     int resource;
     struct spinlock lk;
-    struct procQueueNode* queue;
 
     // for debug
     char* name;
 };
+
+struct proc_list {
+    struct proc* p;
+    struct proc** next;
+};
+
 
 #endif

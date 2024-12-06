@@ -145,7 +145,8 @@ UPROGS=\
 	$U/_gettimeofday\
 	$U/_sleep\
 	$U/_tracetest\
-	$U/_find
+	$U/_find\
+	$U/_heaptest
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

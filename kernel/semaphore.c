@@ -6,7 +6,6 @@ void initSemaphore(struct semaphore* semaphore, int initResource, char* name)
     initlock(&semaphore->lk, "semaphore lock");
     semaphore->resource = initResource;
     semaphore->name = name;
-    semaphore->queue = 0;
 }
 void acquireSemaphore(struct semaphore* semaphore, int acquireResource)
 {
