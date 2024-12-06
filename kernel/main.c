@@ -10,38 +10,39 @@ volatile static int started = 0;
 void
 main()
 {
-  if(cpuid() == 0){
-    consoleinit();
-    printfinit();
-    printf("\n");
-    printf("customed xv6 kernel is booting\n");
-    printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
-    printf("\n");
-    kinit();         // physical page allocator
-    kvminit();       // create kernel page table
-    kvminithart();   // turn on paging
-    procinit();      // process table
-    trapinit();      // trap vectors
-    trapinithart();  // install kernel trap vector
-    plicinit();      // set up interrupt controller
-    plicinithart();  // ask PLIC for device interrupts
-    binit();         // buffer cache
-    iinit();         // inode table
-    fileinit();      // file table
-    virtio_disk_init(); // emulated hard disk
-    userinit();      // first user process
-    __sync_synchronize();
-    started = 1;
-  } else {
-    while(started == 0)
-      ;
-    __sync_synchronize();
-    printf("hart %d starting\n", cpuid());
-    printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
-    kvminithart();    // turn on paging
-    trapinithart();   // install kernel trap vector
-    plicinithart();   // ask PLIC for device interrupts
-  }
+    if(cpuid() == 0){
+        consoleinit();
+        printfinit();
+        printf("\n");
+        printf("customed xv6 kernel is booting\n");
+        printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
+        printf("\n");
+        kinit();         // physical page allocator
+        kvminit();       // create kernel page table
+        kvminithart();   // turn on paging
+        procinit();      // process table
+        trapinit();      // trap vectors
+        trapinithart();  // install kernel trap vector
+        plicinit();      // set up interrupt controller
+        plicinithart();  // ask PLIC for device interrupts
+        binit();         // buffer cache
+        iinit();         // inode table
+        fileinit();      // file table
+        virtio_disk_init(); // emulated hard disk
+        userinit();      // first user process
+        __sync_synchronize();
+        started = 1;
+    } else {
+        while(started == 0)
+        ;
+        __sync_synchronize();
+        printf("hart %d starting\n", cpuid());
+        printf("satp: %lu, memory mapping not enabled in hart %d.\n", r_satp(), cpuid());
+        kvminithart();    // turn on paging
+        trapinithart();   // install kernel trap vector
+        plicinithart();   // ask PLIC for device interrupts
+    }
 
-  scheduler();        
+    printf("main: %d\n", cpuid());
+    scheduler();        
 }

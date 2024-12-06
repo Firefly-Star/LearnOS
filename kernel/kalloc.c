@@ -13,10 +13,25 @@
 #define PA_TO_PNUM(x) ()
 
 
-void freerange(void *pa_start, void *pa_end);
+void* pnum_to_pa(uint64 pnum);
+uint64 pa_to_pnum(void* pa);
+void buddy_init_freelist();
+void buddy_init_bitmap();
+void buddy_init();
+void* buddy_getfirst(uint32 order);
+void buddy_insertfirst(void* newfirst, uint32 order);
+void* buddy_erasefirst(uint32 order);
+void buddy_setbitmap(uint64 pnum, uint32 order, uint32 flag);
+uint32 buddy_getbitmap(uint64 pnum, uint32 order);
+void* buddy_alloc(uint32 order);
+void buddy_free(void* block_start, uint32 order);
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
+
+struct run {
+  struct run *next;
+};
 
 // 128MB的总物理内存，一页有4096B，也就是需要15位的位图来说明整体块的使用情况，刚好是一页的内存
 // 可以做的优化：再分配一页来说明1阶及以上的块的使用情况，能提高buddy_free和buddy_alloc的效率(从o(n)到o(1))
@@ -27,9 +42,9 @@ void* pa_start;
 uint64 pnum_max;
 
 struct {
-    void* bitmap_page;
-    void* freelist_page;
-    void* start;
+    char* bitmap_page;
+    struct run* freelist_page; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
+    char* start;
     struct spinlock lock;
 } buddy;
 
@@ -40,7 +55,7 @@ void* pnum_to_pa(uint64 pnum)
         printf("pnum: %lu, ", pnum);
         panic("pnum_to_pa");
     }
-    return (void*)((uint64)buddy.start + pnum * PGSIZE);
+    return (void*)(buddy.start + pnum * PGSIZE);
 }
 
 uint64 pa_to_pnum(void* pa)
@@ -50,44 +65,47 @@ uint64 pa_to_pnum(void* pa)
         printf("pa: %lu, ", (uint64)(pa));
         panic("pa_to_pnum");
     }
-    return ((uint64)(pa) - (uint64)buddy.start) / PGSIZE;
+    return ((char*)(pa) - buddy.start) / PGSIZE;
 }
 
 // 初始化buddy_链表
-static void buddy_init_freelist()
+void buddy_init_freelist()
 {
     for (int i = 0;i < MAX_ORDER; ++i)
     {
         if (pnum_max & (1 << i))
         {
             uint64 pnum = pnum_max & (~((1 << (i + 1)) - 1));
-            *((void**)((uint64)(buddy.freelist_page) + i * sizeof(void*))) = pnum_to_pa(pnum);
-            *(void**)(pnum_to_pa(pnum)) = 0; // 0表示已经到链表的末尾了
+            struct run* a = pnum_to_pa(pnum);
+            buddy.freelist_page[i].next = a;
+            buddy_setbitmap(pnum, i, 0);
+            a->next = 0; // 0表示已经到链表的末尾了
         }
         else
         {
-            *((void**)((uint64)(buddy.freelist_page) + i * sizeof(void*))) = 0;
+            buddy.freelist_page[i].next = 0;
         }
     }
-    void* work_ptr = buddy.freelist_page + MAX_ORDER * sizeof(void*);
+    struct run* work_ptr = buddy.freelist_page + MAX_ORDER;
     for (uint64 pnum = 0;;)
     {
-        void* next_page = pnum_to_pa(pnum);
-        *((void**)(work_ptr)) = next_page;
+        struct run* next_page = pnum_to_pa(pnum); // 下一页的地址
+        work_ptr->next = next_page;
         work_ptr = next_page;
+        buddy_setbitmap(pnum, MAX_ORDER, 0);
 
         pnum += 1 << MAX_ORDER;
         if (pnum >= pnum_max)
         {
-            *((void**)(work_ptr)) = 0;
+            work_ptr->next = 0;
             break;
         }
     }
 }
 
-static void buddy_init_bitmap()
+void buddy_init_bitmap()
 {
-    memset(buddy.bitmap_page, 0, 2 * PGSIZE);
+    memset(buddy.bitmap_page, 255, 2 * PGSIZE);
 }
 
 void buddy_init(){
@@ -100,33 +118,32 @@ void buddy_init(){
     buddy.start = pa_start + 3 * PGSIZE;
     pnum_max = (PHYSTOP - (uint64)buddy.start) / PGSIZE;
     printf("pnum_max: %lu\n", pnum_max);
-    
 
-    buddy_init_freelist();
     buddy_init_bitmap();
-
+    buddy_init_freelist();
 
     release(&buddy.lock);
 }
 
 void* buddy_getfirst(uint32 order) // 构式一样的取名
 {
-    return *((void**)((uint64)buddy.freelist_page + order * sizeof(void*)));
+    return buddy.freelist_page[order].next;
 }
 
 void buddy_insertfirst(void* newfirst, uint32 order)
 {
-    *((void**)(newfirst)) = buddy_getfirst(order);
-    *((void**)((uint64)buddy.freelist_page + order * sizeof(void*))) = newfirst;
+    struct run* a = newfirst;
+    a->next = buddy.freelist_page[order].next;
+    buddy.freelist_page[order].next = a;
 }
 
 void* buddy_erasefirst(uint32 order)
 {
-    void* result = buddy_getfirst(order);
-    if (result == 0)
+    struct run* next = buddy.freelist_page[order].next;
+    if (next == 0)
         panic("buddy_erasefirst.");
-    *((void**)((uint64)buddy.freelist_page + order * sizeof(void*))) = *((void**)result);
-    return result;
+    buddy.freelist_page[order].next = next->next;
+    return (void*)next;
 }
 // 0000 - 3fff: 0阶
 // 4000 - 5fff: 1阶
@@ -202,12 +219,18 @@ void* buddy_alloc(uint32 order)
     // 将free_order给逐步拆分成order阶的内存块
     void* mem_block = buddy_erasefirst(free_order);
     uint64 pnum = pa_to_pnum(mem_block);
-    while(free_order > order)
+    if (free_order > order)
     {
-        // 设置位图
-        buddy_setbitmap(pnum, free_order, 1);
-        --free_order;
-        buddy_insertfirst((void*)((uint64)mem_block + (1 << free_order) * PGSIZE), free_order); // 把地址相对较高的给存入链表中
+        buddy_setbitmap(pa_to_pnum(mem_block), free_order, 1);
+        while(free_order > order)
+        {
+            // 设置位图
+            buddy_setbitmap(pnum, free_order, 1);
+            --free_order;
+            void* upper_block = (void*)((uint64)mem_block + (1 << free_order) * PGSIZE);
+            buddy_insertfirst(upper_block, free_order); // 把地址相对较高的给存入链表中
+            buddy_setbitmap(pa_to_pnum(upper_block), free_order, 0);
+        }
     }
     buddy_setbitmap(pnum, order, 1);
     return mem_block;
@@ -217,7 +240,10 @@ void buddy_free(void* block_start, uint32 order)
 {
     uint64 pnum = pa_to_pnum(block_start);
     if (pnum & ((1 << order) - 1))
+    {
+        printf("%lu\n", pnum);
         panic("buddy_free");
+    }
 
     buddy_setbitmap(pnum, order, 0);
     uint32 freeorder = order;
@@ -236,13 +262,14 @@ void buddy_free(void* block_start, uint32 order)
         {
             // 从freeorder阶的链表中，找到兄弟页表，移除它
             // 计算得到新的pnum
-            void* buddy_ptr = pnum_to_pa(pnum);
-            void** workptr = (void**)((uint64)(buddy.freelist_page) + freeorder + sizeof(void*));
-            while(*workptr != buddy_ptr)
+            struct run* buddy_ptr = pnum_to_pa(buddy_pnum);
+            
+            struct run* workptr = buddy.freelist_page + freeorder;
+            while(workptr != 0 && workptr->next != buddy_ptr)
             {
-                workptr = (void**)(*workptr);
+                workptr = workptr->next;
             }
-            *workptr = *(void**)(*workptr);
+            workptr->next = workptr->next->next;
             pnum &= ~(1 << freeorder);
             ++freeorder;
         }
@@ -259,95 +286,30 @@ void buddy_free(void* block_start, uint32 order)
 extern int
 printf(char *fmt, ...);
 
-struct run {
-  struct run *next;
-};
-
-struct {
-  struct spinlock lock;
-  struct run *freelist;
-} kmem;
-
-uint64 pgNumber;
+// #define XXX
 
 void
 kinit()
 {
-//   initlock(&kmem.lock, "kmem");
-//   freerange(end, (void*)PHYSTOP);
-//   pgNumber = (PHYSTOP - (uint64)end) / PGSIZE;
-//   printf("spare page number: %lu\n", pgNumber);
     buddy_init();
 }
 
 void
-freerange(void *pa_start, void *pa_end)
-{
-  char *p;
-  p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
-}
-
-// Free the page of physical memory pointed at by pa,
-// which normally should have been returned by a
-// call to kalloc().  (The exception is when
-// initializing the allocator; see kinit above.)
-void
 kfree(void *pa)
 {
-//   struct run *r;
-
-//   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
-//     panic("kfree");
-
-//   // Fill with junk to catch dangling refs.
-//   memset(pa, 1, PGSIZE);
-
-//   r = (struct run*)pa;
-
-//   acquire(&kmem.lock);
-//   r->next = kmem.freelist;
-//   kmem.freelist = r;
-//   ++pgNumber;
-//   release(&kmem.lock);
-
     acquire(&buddy.lock);
-
     buddy_free(pa, 0);
-
     release(&buddy.lock);
 }
 
-// Allocate one 4096-byte page of physical memory.
-// Returns a pointer that the kernel can use.
-// Returns 0 if the memory cannot be allocated.
 void *
 kalloc(void)
 {
-//   struct run *r;
-
-//   acquire(&kmem.lock);
-//   r = kmem.freelist;
-//   if(r)
-//   {
-//     kmem.freelist = r->next;
-//     --pgNumber;
-//   }
-//   release(&kmem.lock);
-
-//   if(r)
-//     memset((char*)r, 5, PGSIZE); // fill with junk
-//   return (void*)r;
     void* result;
 
     acquire(&buddy.lock);
-
     result = buddy_alloc(0);
-    printf("alloc: %lu\n", (uint64)(result));
-
     release(&buddy.lock);
-
 
     return result;
 }
