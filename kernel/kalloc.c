@@ -9,10 +9,74 @@
 #include "riscv.h"
 #include "defs.h"
 
+#define PNUM_TO_PA(x) (end + (x) * PGSIZE)
+#define PA_TO_PNUM(x) ()
+
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
+
+void* pa_start;
+uint64 pnum_max;
+
+void pa_start_init(){
+    pa_start = (char*)PGROUNDUP((uint64)pa_start);
+    pnum_max = (PHYSTOP - (uint64)pa_start) / PGSIZE;
+}
+
+void* pnum_to_pa(uint64 pnum)
+{
+    if (pnum >= pnum_max)
+    {
+        panic("pnum_to_pa");
+        return 0;
+    }
+    return (void*)((uint64)pa_start + pnum * PGSIZE);
+}
+
+uint64 pa_to_pnum(void* pa)
+{
+    if ((uint64)pa >= PHYSTOP)
+    {
+        panic("pa_to_pnum");
+        return ~0;
+    }
+    return ((uint64)(pa) - (uint64)pa_start) / PGSIZE;
+}
+
+// 128MB的总物理内存，一页有4096B，也就是需要15位的位图来说明整体块的使用情况，刚好是一页的内存
+// 可以做的优化：再分配一页来说明1阶及以上的块的使用情况，能提高buddy_free的效率
+
+void* buddy_bitmap_page;
+void* buddy_list_head;
+struct spinlock buddy_lock;
+
+void buddy_init()
+{
+    initlock(&buddy_lock, "buddy");
+    acquire(&buddy_lock);
+    buddy_bitmap_page = pa_start;
+    memset(buddy_bitmap_page, 0, PGSIZE);
+    // 分配第一块给位图，分配第二块作为不同阶的buddy的首指针。
+    release(&buddy_lock);
+}
+
+void* buddy_alloc(uint32 order)
+{
+
+}
+
+void* buddy_free(void* block_start, uint32 order)
+{
+
+}
+
+void buddy_setbitmap(uint64 pnum, uint32 order, int flag)
+{
+    
+}
 
 extern int
 printf(char *fmt, ...);
