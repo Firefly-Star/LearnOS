@@ -43,7 +43,7 @@ uint64 pnum_max;
 
 struct {
     char* bitmap_page;
-    struct run* freelist_page; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
+    struct run freelist_page[MAX_ORDER]; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
     char* start;
     struct spinlock lock;
 } buddy;
@@ -114,8 +114,7 @@ void buddy_init(){
 
     pa_start = (char*)PGROUNDUP((uint64)end);
     buddy.bitmap_page = pa_start; // 第一、二块内存分配给位图
-    buddy.freelist_page = pa_start + 2 * PGSIZE; // 第三块分配给链表，这里的内存有一大半都是被浪费的，未来可以在里面加东西
-    buddy.start = pa_start + 3 * PGSIZE;
+    buddy.start = pa_start + 2 * PGSIZE;
     pnum_max = (PHYSTOP - (uint64)buddy.start) / PGSIZE;
     printf("pnum_max: %lu\n", pnum_max);
 
