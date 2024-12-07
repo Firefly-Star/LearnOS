@@ -43,7 +43,7 @@ uint64 pnum_max;
 
 struct {
     char* bitmap_page;
-    struct run freelist_page[MAX_ORDER]; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
+    struct run freelist_page[MAX_ORDER + 1]; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
     char* start;
     struct spinlock lock;
 } buddy;
@@ -71,35 +71,22 @@ uint64 pa_to_pnum(void* pa)
 // 初始化buddy_链表
 void buddy_init_freelist()
 {
+    for (int i = 0;i <= MAX_ORDER; ++i)
+    {
+        buddy.freelist_page[i].next = 0;
+    }
+
     for (int i = 0;i < MAX_ORDER; ++i)
     {
         if (pnum_max & (1 << i))
         {
             uint64 pnum = pnum_max & (~((1 << (i + 1)) - 1));
-            struct run* a = pnum_to_pa(pnum);
-            buddy.freelist_page[i].next = a;
-            buddy_setbitmap(pnum, i, 0);
-            a->next = 0; // 0表示已经到链表的末尾了
-        }
-        else
-        {
-            buddy.freelist_page[i].next = 0;
+            buddy_insertfirst(pnum_to_pa(pnum), i);
         }
     }
-    struct run* work_ptr = buddy.freelist_page + MAX_ORDER;
-    for (uint64 pnum = 0;;)
+    for (uint64 pnum = 0; pnum + (1 << MAX_ORDER) <= pnum_max; pnum += (1 << MAX_ORDER))
     {
-        struct run* next_page = pnum_to_pa(pnum); // 下一页的地址
-        work_ptr->next = next_page;
-        work_ptr = next_page;
-        buddy_setbitmap(pnum, MAX_ORDER, 0);
-
-        pnum += 1 << MAX_ORDER;
-        if (pnum >= pnum_max)
-        {
-            work_ptr->next = 0;
-            break;
-        }
+        buddy_insertfirst(pnum_to_pa(pnum), MAX_ORDER);
     }
 }
 
@@ -134,6 +121,7 @@ void buddy_insertfirst(void* newfirst, uint32 order)
     struct run* a = newfirst;
     a->next = buddy.freelist_page[order].next;
     buddy.freelist_page[order].next = a;
+    buddy_setbitmap(pa_to_pnum(newfirst), order, 0);
 }
 
 void* buddy_erasefirst(uint32 order)
@@ -142,8 +130,41 @@ void* buddy_erasefirst(uint32 order)
     if (next == 0)
         panic("buddy_erasefirst.");
     buddy.freelist_page[order].next = next->next;
+    buddy_setbitmap(pa_to_pnum(next), order, 1);
     return (void*)next;
 }
+
+int buddy_find(void* ptr, uint32 order)
+{
+    struct run* prev = buddy.freelist_page + order;
+    while(prev != 0 && prev->next != (struct run*)ptr)
+    {
+        prev = prev->next;
+    }
+    if (prev == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+    
+}
+
+void buddy_erase(void* ptr, uint32 order)
+{
+    struct run* prev = buddy.freelist_page + order;
+    while(prev != 0 && prev->next != (struct run*)ptr)
+    {
+        prev = prev->next;
+    }
+    if (prev == 0)
+        panic("buddy_erase");
+    prev->next = prev->next->next;
+    buddy_setbitmap(pa_to_pnum(ptr), order, 1);
+}
+
 // 0000 - 3fff: 0阶
 // 4000 - 5fff: 1阶
 // 6000 - 6fff: 2阶
@@ -179,15 +200,15 @@ void buddy_setbitmap(uint64 pnum, uint32 order, uint32 flag)
         panic("buddy_setbitmap");
     
     char* start = (char*)buddy.bitmap_page + buddy_bitmap_offset[order];
-    uint64 bit_offset = pnum >> order;
-    char mask = 1 << (bit_offset % 8);
+    uint64 offset = pnum >> order;
+    char mask = 1 << (offset % 8);
     if (flag)
     {
-        start[bit_offset / 8] |= mask;
+        start[offset / 8] |= mask;
     }
     else
     {
-        start[bit_offset / 8] &= (~mask);
+        start[offset / 8] &= (~mask);
     }
 }
 
@@ -197,9 +218,9 @@ uint32 buddy_getbitmap(uint64 pnum, uint32 order)
         panic("buddy_getbitmap");
     
     char* start = (char*)buddy.bitmap_page + buddy_bitmap_offset[order];
-    uint64 bit_offset = pnum >> order;
-    char mask = 1 << (bit_offset % 8);
-    return start[bit_offset / 8] & mask;
+    uint64 offset = pnum >> order;
+    char mask = 1 << (offset % 8);
+    return start[offset / 8] & mask;
 }
 
 void* buddy_alloc(uint32 order)
@@ -217,21 +238,15 @@ void* buddy_alloc(uint32 order)
     
     // 将free_order给逐步拆分成order阶的内存块
     void* mem_block = buddy_erasefirst(free_order);
-    uint64 pnum = pa_to_pnum(mem_block);
     if (free_order > order)
     {
-        buddy_setbitmap(pa_to_pnum(mem_block), free_order, 1);
         while(free_order > order)
         {
-            // 设置位图
-            buddy_setbitmap(pnum, free_order, 1);
             --free_order;
             void* upper_block = (void*)((uint64)mem_block + (1 << free_order) * PGSIZE);
             buddy_insertfirst(upper_block, free_order); // 把地址相对较高的给存入链表中
-            buddy_setbitmap(pa_to_pnum(upper_block), free_order, 0);
         }
     }
-    buddy_setbitmap(pnum, order, 1);
     return mem_block;
 }
 
@@ -244,33 +259,28 @@ void buddy_free(void* block_start, uint32 order)
         panic("buddy_free");
     }
 
-    buddy_setbitmap(pnum, order, 0);
     uint32 freeorder = order;
     
     while(freeorder < MAX_ORDER)
     {
-        buddy_setbitmap(pnum, freeorder, 0);
         uint64 buddy_pnum = pnum ^ (1 << freeorder);
-        if (buddy_pnum < pnum_max && buddy_getbitmap(buddy_pnum, freeorder))
+        if (buddy_pnum < pnum_max && /*!buddy_getbitmap(buddy_pnum, freeorder)*/buddy_find(pnum_to_pa(buddy_pnum), freeorder))
         {
-            // 将pnum对应的内存块放到freeorder的链表中
-            buddy_insertfirst(pnum_to_pa(pnum), freeorder);
-            break;
-        }
-        else
-        {
+            // 兄弟块空闲
             // 从freeorder阶的链表中，找到兄弟页表，移除它
             // 计算得到新的pnum
             struct run* buddy_ptr = pnum_to_pa(buddy_pnum);
             
-            struct run* workptr = buddy.freelist_page + freeorder;
-            while(workptr != 0 && workptr->next != buddy_ptr)
-            {
-                workptr = workptr->next;
-            }
-            workptr->next = workptr->next->next;
+            buddy_erase(buddy_ptr, freeorder);
             pnum &= ~(1 << freeorder);
             ++freeorder;
+        }
+        else
+        {
+            // 兄弟块不空闲
+            // 将pnum对应的内存块放到freeorder的链表中
+            buddy_insertfirst(pnum_to_pa(pnum), freeorder);
+            break;
         }
     }
     if (freeorder == MAX_ORDER)
