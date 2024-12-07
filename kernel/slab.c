@@ -90,7 +90,7 @@ void kmem_cache_create(struct kmem_cache* cache, const char* name, uint16 sz, ui
     release(&cache->lock);
 }
 
-void kmem_cache_destroy(struct kmem_cache* cache, uint16 sz, uint16 align)
+void kmem_cache_destroy(struct kmem_cache* cache)
 {
     return;
 }
