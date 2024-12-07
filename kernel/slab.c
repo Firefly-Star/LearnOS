@@ -50,14 +50,101 @@ struct kmem_cache g_slab_512;
 
 // TODO: 批量分配和批量释放, cpu专用缓存和共用缓存的区分
 
+#define ALIGN_UP(sz, align) ((sz + (align - 1)) & (~(align - 1)))
+
 struct snode* init_small_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
 {
     // 隐式链接，把页的链接直接放在每个页面的首个对象的位置
+    struct snode* firstpg = (struct snode*)(kalloc());
+    uint16 unitsz = ALIGN_UP(sz, align);
+    uint16 eub = init_pgnum - 1;
+    uint16 iub = (PGSIZE) / unitsz - 1;
+    { // 初始化
+        char* curpg = (char*)firstpg;
+        // 前(init_pnum - 1)页
+        for (int i = 0;i < eub; ++i)
+        {
+            // 前(PGSIZE) / unitsz - 1项
+            for (int j = 1;j < iub; ++j)
+            {
+                struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+                fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
+            }
+            // 链接snode
+            char* newpg = (char*)(kalloc());
+            struct snode* t = (struct snode*)(curpg);
+            t->next = (struct snode*)(newpg);
+
+            // 最后一项和下一页的第一项链接
+            struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
+            fb->next = (struct freeblock*)(newpg + unitsz);
+
+            curpg = newpg;
+        }   
+        // 第init_pnum页
+        // 前(PGSIZE) / unitsz - 1项
+        for (int j = 1;j < iub; ++j)
+        {
+            struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+            fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
+        }
+        // snode->next置空
+        struct snode* t = (struct snode*)(curpg);
+        t->next = NULL;
+
+        // 最后一项的下一项置空C
+        struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
+        fb->next = NULL;
+    }
+    return firstpg;
 }
 
 struct lnode* init_large_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
 {
     // 显式链接，把页的链接放在g_slab_16中，依赖于g_slab_16的初始化
+    struct lnode* result = (struct lnode*)kmem_cache_alloc(&g_slab_16);
+    uint16 unitsz = ALIGN_UP(sz, align);
+    uint16 eub = init_pgnum - 1;
+    uint16 iub = (PGSIZE) / unitsz - 1;
+    { // 初始化
+        char* firstpg = (char*)(kalloc());
+        result->curpage = firstpg;
+        char* curpg = firstpg;
+        struct lnode* curnode = result;
+        // 前init_pgnum - 1页
+        for (int i = 0;i < eub; ++i)
+        {
+            // 前(PGSIZE) / unitsz - 1项
+            for (int j = 0;j < iub; ++j)
+            {
+                struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+                fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
+            }
+            // 链接lnode
+            char* newpg = (char*)(kalloc());
+            curnode->next = newpg;
+
+            //最后一项和下一页的第一项链接
+            struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
+            fb->next = (struct freeblock*)(newpg);
+
+            curnode = (struct lnode*)(kmem_cache_alloc(&g_slab_16));
+            curpg = newpg;
+        }
+        // 最后一页
+        // 前(PGSIZE) / unitsz - 1项
+        for (int j = 0;j < iub; ++j)
+        {
+            struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+            fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
+        }
+        // lnode->next置空
+        curnode->next = NULL;
+
+        //最后一项和下一页的第一项链接
+        struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
+        fb->next = NULL;
+    }
 }
 
 void slab_init()
@@ -73,6 +160,9 @@ void slab_init()
 
 void kmem_cache_create(struct kmem_cache* cache, const char* name, uint16 sz, uint16 align, uint16 init_pgnum)
 {
+    if(align & (align - 1))
+        panic("kmem_cache_create: invalid alignment.");
+
     initlock(&(cache->lock), name);
     acquire(&cache->lock);
 
