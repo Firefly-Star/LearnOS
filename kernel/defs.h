@@ -135,6 +135,7 @@ void            pop_off(void);
 // slab.c
 struct          kmem_cache;
 void            slab_init();
+void            kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 align, uint16 init_pgnum);
 void            kmem_cache_destroy(struct kmem_cache*);
 void*           kmem_cache_alloc(struct kmem_cache*);
 void            kmem_cache_free(struct kmem_cache*, void*);

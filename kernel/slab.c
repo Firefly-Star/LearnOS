@@ -122,7 +122,7 @@ struct lnode* init_large_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
             }
             // 链接lnode
             char* newpg = (char*)(kalloc());
-            curnode->next = newpg;
+            curnode->next = (struct lnode*)(newpg);
 
             //最后一项和下一页的第一项链接
             struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
@@ -145,6 +145,8 @@ struct lnode* init_large_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
         struct freeblock* fb = (struct freeblock*)(curpg + iub * unitsz);
         fb->next = NULL;
     }
+
+    return result;
 }
 
 void slab_init()
@@ -158,7 +160,7 @@ void slab_init()
     kmem_cache_create(&g_slab_512, "g_slab_512", 512, 512, 1);
 }
 
-void kmem_cache_create(struct kmem_cache* cache, const char* name, uint16 sz, uint16 align, uint16 init_pgnum)
+void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 align, uint16 init_pgnum)
 {
     if(align & (align - 1))
         panic("kmem_cache_create: invalid alignment.");
@@ -181,6 +183,16 @@ void kmem_cache_create(struct kmem_cache* cache, const char* name, uint16 sz, ui
 }
 
 void kmem_cache_destroy(struct kmem_cache* cache)
+{
+    return;
+}
+
+void *kmem_cache_alloc(struct kmem_cache * cache)
+{
+    return NULL;
+}
+
+void kmem_cache_free(struct kmem_cache* cache, void* pa)
 {
     return;
 }
