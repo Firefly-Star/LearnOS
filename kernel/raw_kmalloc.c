@@ -19,9 +19,7 @@ struct{
     struct spinlock lock;
 } raw_kmallocator;
 
-void raw_kmalloc_init();
-void* raw_kmalloc(uint32 sz, uint32 align);
-void raw_kfree(void* pa);
+
 
 static void dilatation()
 {
@@ -58,13 +56,19 @@ void raw_kmalloc_init()
     release(&raw_kmallocator.lock);
 }
 
-void *raw_kmalloc(uint32 sz, uint32 align)
+void* raw_kmalloc(uint32 sz, uint32 align)
 {
     if (sz >= PGSIZE)
         panic("raw_kmalloc: invalid size.");
     if (align & (align - 1))
         panic("raw_kmalloc: invalid alignment.");
+
+    if (raw_kmallocator.first == NULL)
+        dilatation();
     
+    struct raw_page_info* curpg = raw_kmallocator.first;
+    struct freeblock_info* curinfo = &(curpg->head);
+
 
     return NULL;
 }

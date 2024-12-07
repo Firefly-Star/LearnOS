@@ -26,13 +26,8 @@ struct kmem_cache{
     struct spinlock lock;
 };
 
-struct kmem_cache* kmem_cache_create(const char* name, uint16 sz, uint16 init_pgnum);
-struct kmem_cache* kmem_cache_destroy(const char* name, uint16 sz);
-void* kmem_cache_alloc(struct kmem_cache *cachep);
-void kmem_cache_free(struct kmem_cache *cachep, void *objp);
 // TODO: 批量分配和批量释放, cpu专用缓存和共用缓存的区分
 
-struct kmem_cache* kmem_cache_create(const char* name, uint16 sz, uint16 init_pgnum)
+struct kmem_cache* kmem_cache_create(const char* name, uint16 sz, uint16 align, uint16 init_pgnum)
 {
-    
 }
