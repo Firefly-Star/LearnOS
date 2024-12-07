@@ -42,7 +42,7 @@ void* pa_start;
 uint64 pnum_max;
 
 struct {
-    char* bitmap_page;
+    char bitmap_page[2 * PGSIZE];
     struct run freelist_page[MAX_ORDER + 1]; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
     char* start;
     struct spinlock lock;
@@ -92,7 +92,10 @@ void buddy_init_freelist()
 
 void buddy_init_bitmap()
 {
-    memset(buddy.bitmap_page, 255, 2 * PGSIZE);
+    for (int i = 0; i < (2 * PGSIZE); i ++)
+    {
+        *(uint8*)(buddy.bitmap_page + i) = 255;
+    }
 }
 
 void buddy_init(){
@@ -100,8 +103,7 @@ void buddy_init(){
     acquire(&buddy.lock);
 
     pa_start = (char*)PGROUNDUP((uint64)end);
-    buddy.bitmap_page = pa_start; // 第一、二块内存分配给位图
-    buddy.start = pa_start + 2 * PGSIZE;
+    buddy.start = pa_start;
     pnum_max = (PHYSTOP - (uint64)buddy.start) / PGSIZE;
     printf("pnum_max: %lu\n", pnum_max);
 
@@ -165,33 +167,34 @@ void buddy_erase(void* ptr, uint32 order)
     buddy_setbitmap(pa_to_pnum(ptr), order, 1);
 }
 
-// 0000 - 3fff: 0阶
-// 4000 - 5fff: 1阶
-// 6000 - 6fff: 2阶
-// 7000 - 77ff: 3阶
-// 7800 - 7bff: 4阶
-// 7c00 - 7dff: 5阶
-// 7e00 - 7eff: 6阶
-// 7f00 - 7f7f: 7阶
-// 7f80 - 7fbf: 8阶
-// 7fc0 - 7fdf: 9阶
-// 7fe0 - 7fef: 10阶
-// 7ff0 - 7ff7: 11阶
+// 0000 - 0fff: 0阶
+// 1000 - 17ff: 1阶
+// 1800 - 1bff: 2阶
+// 1c00 - 1dff: 3阶
+// 1e00 - 1eff: 4阶
+// 1f00 - 1f7f: 5阶
+// 1f80 - 1fbf: 6阶
+// 1fc0 - 1fdf: 7阶
+// 1fe0 - 1fef: 8阶
+// 1ff0 - 1ff7: 9阶
+// 1ff8 - 1ffb: 10阶
+// 1ffc - 1ffd: 11阶
+// 1ffe       : 12阶
 
 uint16 buddy_bitmap_offset[] = {
 [0]     0x0000,
-[1]     0x4000,
-[2]     0x6000,
-[3]     0x7000,
-[4]     0x7000,
-[5]     0x7800,
-[6]     0x7c00,
-[7]     0x7e00,
-[8]     0x7f00,
-[9]     0x7f80,
-[10]    0x7fc0,
-[11]    0x7fe0,
-[12]    0x7ff0
+[1]     0x1000,
+[2]     0x1800,
+[3]     0x1c00,
+[4]     0x1e00,
+[5]     0x1f00,
+[6]     0x1f80,
+[7]     0x1fc0,
+[8]     0x1fe0,
+[9]     0x1ff0,
+[10]    0x1ff8,
+[11]    0x1ffc,
+[12]    0x1ffe
 };
 
 void buddy_setbitmap(uint64 pnum, uint32 order, uint32 flag)
@@ -264,8 +267,11 @@ void buddy_free(void* block_start, uint32 order)
     while(freeorder < MAX_ORDER)
     {
         uint64 buddy_pnum = pnum ^ (1 << freeorder);
-        if (buddy_pnum < pnum_max && /*!buddy_getbitmap(buddy_pnum, freeorder)*/buddy_find(pnum_to_pa(buddy_pnum), freeorder))
+        if(!buddy_getbitmap(buddy_pnum, freeorder) && !buddy_find(pnum_to_pa(buddy_pnum), freeorder))
+                printf("\nlb conflict: %lu, %d.\n", buddy_pnum, freeorder);
+        if (buddy_pnum < pnum_max && !buddy_getbitmap(buddy_pnum, freeorder))
         {
+            
             // 兄弟块空闲
             // 从freeorder阶的链表中，找到兄弟页表，移除它
             // 计算得到新的pnum
