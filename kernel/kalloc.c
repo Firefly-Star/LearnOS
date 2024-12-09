@@ -30,7 +30,8 @@ extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
 struct run {
-  struct run *next;
+    struct run* prev;
+    struct run* next;
 };
 
 // 128MB的总物理内存，一页有4096B，也就是需要15位的位图来说明整体块的使用情况，刚好是一页的内存
@@ -73,7 +74,8 @@ void buddy_init_freelist()
 {
     for (int i = 0;i <= MAX_ORDER; ++i)
     {
-        buddy.freelist_page[i].next = 0;
+        buddy.freelist_page[i].next = NULL;
+        buddy.freelist_page[i].prev = NULL;
     }
 
     for (int i = 0;i < MAX_ORDER; ++i)
@@ -120,8 +122,13 @@ void* buddy_getfirst(uint32 order) // 构式一样的取名
 
 void buddy_insertfirst(void* newfirst, uint32 order)
 {
-    struct run* a = newfirst;
+    struct run* a = (struct run*)newfirst;
+    a->prev = buddy.freelist_page + order;
     a->next = buddy.freelist_page[order].next;
+    if (buddy.freelist_page[order].next != NULL)
+    {
+        buddy.freelist_page[order].next->prev = a;
+    }
     buddy.freelist_page[order].next = a;
     buddy_setbitmap(pa_to_pnum(newfirst), order, 0);
 }
@@ -132,38 +139,24 @@ void* buddy_erasefirst(uint32 order)
     if (next == 0)
         panic("buddy_erasefirst.");
     buddy.freelist_page[order].next = next->next;
+    if (next->next != NULL)
+    {
+        buddy.freelist_page[order].next->prev = buddy.freelist_page + order;
+    }
     buddy_setbitmap(pa_to_pnum(next), order, 1);
     return (void*)next;
 }
 
-int buddy_find(void* ptr, uint32 order)
-{
-    struct run* prev = buddy.freelist_page + order;
-    while(prev != 0 && prev->next != (struct run*)ptr)
-    {
-        prev = prev->next;
-    }
-    if (prev == 0)
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-    
-}
-
 void buddy_erase(void* ptr, uint32 order)
 {
-    struct run* prev = buddy.freelist_page + order;
-    while(prev != 0 && prev->next != (struct run*)ptr)
-    {
-        prev = prev->next;
-    }
-    if (prev == 0)
+    struct run* current = (struct run*)ptr;
+    if (current->prev == 0)
         panic("buddy_erase");
-    prev->next = prev->next->next;
+    current->prev->next = current->next;    
+    if (current->next != NULL)
+    {
+        current->next->prev = current->prev;
+    }
     buddy_setbitmap(pa_to_pnum(ptr), order, 1);
 }
 
@@ -248,6 +241,7 @@ void* buddy_alloc(uint32 order)
             --free_order;
             void* upper_block = (void*)((uint64)mem_block + (1 << free_order) * PGSIZE);
             buddy_insertfirst(upper_block, free_order); // 把地址相对较高的给存入链表中
+
         }
     }
     return mem_block;
@@ -267,8 +261,6 @@ void buddy_free(void* block_start, uint32 order)
     while(freeorder < MAX_ORDER)
     {
         uint64 buddy_pnum = pnum ^ (1 << freeorder);
-        if(!buddy_getbitmap(buddy_pnum, freeorder) && !buddy_find(pnum_to_pa(buddy_pnum), freeorder))
-                printf("\nlb conflict: %lu, %d.\n", buddy_pnum, freeorder);
         if (buddy_pnum < pnum_max && !buddy_getbitmap(buddy_pnum, freeorder))
         {
             
@@ -325,6 +317,8 @@ kalloc(void)
     acquire(&buddy.lock);
     result = buddy_alloc(0);
     release(&buddy.lock);
+
+    memset(result, 0, PGSIZE);
 
     return result;
 }

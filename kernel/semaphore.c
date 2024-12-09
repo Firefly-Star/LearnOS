@@ -1,27 +1,12 @@
 #include "semaphore.h"
 #include "defs.h"
+#include "slab.h"
 
-void initSemaphore(struct semaphore* semaphore, int initResource, char* name)
-{
-    initlock(&semaphore->lk, "semaphore lock");
-    semaphore->resource = initResource;
-    semaphore->name = name;
-}
-void acquireSemaphore(struct semaphore* semaphore, int acquireResource)
-{
-    acquire(&semaphore->lk);
-    if (semaphore->resource >= acquireResource)
-    {
-        semaphore->resource -= acquireResource;
-        release(&semaphore->lk);
-    }
-    else
-    {
-        
-    }
+struct spinlock g_sem_lock;
+struct kmem_cache g_proclist_slab;
 
-}
-void releaseSemaphore(struct semaphore*, int releaseResource)
+void sem_init()
 {
-
+    initlock(&g_sem_lock, "g_sem_lock");
+    kmem_cache_create(&g_proclist_slab, "g_proclist_slab", sizeof(struct proclist), 8, 1);
 }

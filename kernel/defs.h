@@ -211,13 +211,11 @@ void            virtio_disk_intr(void);
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 // time.c
-struct timeVal _gettimeofday(void);
+struct timeVal  _gettimeofday(void);
 
 // trace.c
-void _trace(uint64 mask);
+void            _trace(uint64 mask);
 
 // semaphore.c
 struct semaphore;
-void initSemaphore(struct semaphore*, int, char*);
-void acquireSemaphore(struct semaphore*, int);
-void releaseSemaphore(struct semaphore*, int);
+void            sem_init();

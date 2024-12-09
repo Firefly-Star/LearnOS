@@ -22,6 +22,7 @@ main()
         kvminithart();   // turn on paging
         slab_init();
         procinit();      // process table
+        sem_init();
         trapinit();      // trap vectors
         trapinithart();  // install kernel trap vector
         plicinit();      // set up interrupt controller
@@ -44,6 +45,5 @@ main()
         plicinithart();   // ask PLIC for device interrupts
     }
 
-    printf("main: %d\n", cpuid());
     scheduler();        
 }

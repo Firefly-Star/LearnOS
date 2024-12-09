@@ -26,7 +26,7 @@
 #define VIRTIO0_IRQ 1
 
 /*
-    ´ÓÍøÉÏµÄ×ÊÁÏÖÐ²éÕÒµÃµ½µÄCLINTµØÖ·ÒÔ¼°Ò»ÏµÁÐÓ²¼þ¼Ä´æÆ÷ÔÚÖ÷´æÖÐµÄµØÖ·
+    ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ÒµÃµï¿½ï¿½ï¿½CLINTï¿½ï¿½Ö·ï¿½Ô¼ï¿½Ò»Ïµï¿½ï¿½Ó²ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄµï¿½Ö·
 */
 // core local interruptor(CLINT), which contains the timer
 #define CLINT 0x2000000L
@@ -45,16 +45,16 @@
 // for use by the kernel and user pages
 // from physical address 0x80000000 to PHYSTOP.
 #define KERNBASE 0x80000000L
-#define PHYSTOP (KERNBASE + 128*1024*1024)
+#define PHYSTOP (KERNBASE + 128 * 1024 * 1024)
 
 /*
-    ÕâÀïµÄMAXVAµÄ¶¨ÒåÔÚriscv.hÖÐ£¬Ô­ÎÄÎª
+    ï¿½ï¿½ï¿½ï¿½ï¿½MAXVAï¿½Ä¶ï¿½ï¿½ï¿½ï¿½ï¿½riscv.hï¿½Ð£ï¿½Ô­ï¿½ï¿½Îª
     // one beyond the highest possible virtual address.
     // MAXVA is actually one bit less than the max allowed by
     // Sv39, to avoid having to sign-extend virtual addresses
     // that have the high bit set.
     #define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
-    ¼´ËüÊÇÐéÄâµØÖ·¿Õ¼äÖÐ×î´óµÄµØÖ·¡£
+    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½Ö·ï¿½ï¿½
 */
 // map the trampoline page to the highest address,
 // in both user and kernel space.

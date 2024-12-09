@@ -24,3 +24,5 @@
 #define SYS_gettimeofday 23
 #define SYS_trace 24
 #define SYS_find 25
+#define SYS_sleep_for_signal 26
+#define SYS_wake_up_signal 27

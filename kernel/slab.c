@@ -1,24 +1,6 @@
 #include "defs.h"
-#include "spinlock.h"
 #include "riscv.h"
-
-struct freeblock{
-    struct freeblock* next;
-};
-
-struct snode{
-    struct snode* next;
-};
-
-struct lnode{
-    char* curpage;
-    struct lnode* next;
-};
-
-union pagelink{
-    struct snode* shead;
-    struct lnode* lhead;
-};
+#include "slab.h"
 
 /*
 对象字节数    初始分配的页数  
@@ -32,15 +14,6 @@ union pagelink{
 >=4KB		使用多个页组合大对象
 */
 
-struct kmem_cache{ // TODO: 对大对象的首个可用对象的地址进行独立存储
-    char* name;
-    uint16 size;
-    uint16 align;
-    uint16 unitsz;
-    union pagelink head;
-    struct spinlock lock;
-};
-
 struct kmem_cache g_slab_8;
 struct kmem_cache g_slab_16;
 struct kmem_cache g_slab_32;
@@ -48,6 +21,8 @@ struct kmem_cache g_slab_64;
 struct kmem_cache g_slab_128;
 struct kmem_cache g_slab_256;
 struct kmem_cache g_slab_512;
+
+struct kmem_cache g_slab_kmem_cache;
 
 // TODO: 批量分配和批量释放, cpu专用缓存和共用缓存的区分
 
@@ -273,6 +248,7 @@ void slab_init()
     kmem_cache_create(&g_slab_128, "g_slab_128", 128, 128, 2);
     kmem_cache_create(&g_slab_256, "g_slab_256", 256, 256, 1);
     kmem_cache_create(&g_slab_512, "g_slab_512", 512, 512, 1);
+    kmem_cache_create(&g_slab_kmem_cache, "g_slab_kmem_cache", sizeof(struct kmem_cache), 8, 1);
 }
 
 void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 align, uint16 init_pgnum)

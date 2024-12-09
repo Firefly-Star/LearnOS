@@ -137,3 +137,15 @@ sys_find(void)
     _trace(mask);
     return 0;
 }
+
+extern struct spinlock g_sem_lock;
+
+uint64
+sys_sleep_for_signal(void)
+{
+    uint64 sem_uptr;
+    argaddr(0, &sem_uptr);
+    acquire(&g_sem_lock);
+
+    return 0;
+}

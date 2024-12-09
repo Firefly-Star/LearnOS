@@ -4,19 +4,21 @@
 #include "spinlock.h"
 #include "proc.h"
 
-struct semaphore
-{
-    int resource;
-    struct spinlock lk;
-
-    // for debug
-    char* name;
+struct proclist{
+    struct proc* current;
+    struct proclist* next;
 };
 
-struct proc_list {
-    struct proc* p;
-    struct proc** next;
+struct sem_t{
+    struct spinlock lock;
+    struct proclist* first;
+    struct proclist* last;
+    uint32 value;
 };
 
+struct sem_file{
+    struct sem_t s;
+    int reference;
+};
 
 #endif
