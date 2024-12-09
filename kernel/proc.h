@@ -114,6 +114,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   uint64 traceMask;            // 追踪的系统调用号
+  int slot;                    // 调度所需的时间片
 };
 
 struct procQueueNode

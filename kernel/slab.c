@@ -36,6 +36,7 @@ struct kmem_cache{ // TODO: 对大对象的首个可用对象的地址进行独�
     char* name;
     uint16 size;
     uint16 align;
+    uint16 unitsz;
     union pagelink head;
     struct spinlock lock;
 };
@@ -52,11 +53,10 @@ struct kmem_cache g_slab_512;
 
 #define ALIGN_UP(sz, align) (((sz) + ((align) - 1)) & (~((align) - 1)))
 
-struct snode* init_small_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
+struct snode* init_small_object_pool(uint16 unitsz, uint16 init_pgnum)
 {
     // 隐式链接，把页的链接直接放在每个页面的首个对象的位置
     struct snode* firstpg = (struct snode*)(kalloc());
-    uint16 unitsz = ALIGN_UP(sz, align);
     uint16 eub = init_pgnum - 1;
     uint16 iub = (PGSIZE) / unitsz - 1;
     { // 初始化
@@ -67,7 +67,7 @@ struct snode* init_small_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
             // 前(PGSIZE) / unitsz - 1项
             for (int j = 1;j < iub; ++j)
             {
-                struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+                volatile struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
                 fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
             }
             // 链接snode
@@ -85,7 +85,7 @@ struct snode* init_small_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
         // 前(PGSIZE) / unitsz - 1项
         for (int j = 1;j < iub; ++j)
         {
-            struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
+            volatile struct freeblock* fb = (struct freeblock*)(curpg + j * unitsz);
             fb->next = (struct freeblock*)(curpg + (j + 1) * unitsz);
         }
         // snode->next置空
@@ -99,11 +99,10 @@ struct snode* init_small_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
     return firstpg;
 }
 
-struct lnode* init_large_object_pool(uint16 sz, uint16 align, uint16 init_pgnum)
+struct lnode* init_large_object_pool(uint16 unitsz, uint16 init_pgnum)
 {
     // 显式链接，把页的链接放在g_slab_16中，依赖于g_slab_16的初始化
     struct lnode* result = (struct lnode*)kmem_cache_alloc(&g_slab_16);
-    uint16 unitsz = ALIGN_UP(sz, align);
     uint16 eub = init_pgnum - 1;
     uint16 iub = (PGSIZE) / unitsz - 1;
     { // 初始化
@@ -178,15 +177,15 @@ void destroy_large_object_pool(struct kmem_cache* cache)
 void* alloc_small_object_pool(struct kmem_cache* cache)
 {
     struct snode* head = cache->head.shead;
-    struct freeblock* faptr = (struct freeblock*)((char*)head + sizeof(struct snode)); // 第一个位置永远不会被分配，用来存储首个可用槽位
+    struct freeblock* faptr = (struct freeblock*)((char*)head + cache->unitsz); // 第一个位置永远不会被分配，用来存储首个可用槽位
     struct freeblock* fa = faptr->next;
     if (fa == NULL)
     {
         // 把扩容出来的页放在第一页(可能需要优化，待测试)
-        struct snode* newpg = init_small_object_pool(cache->size, cache->align, 1);
+        struct snode* newpg = init_small_object_pool(cache->unitsz, 1);
         newpg->next = head;
         cache->head.shead = newpg;
-        uint16 unitsz = ALIGN_UP(cache->size, cache->align);
+        uint16 unitsz = cache->unitsz;
         struct freeblock* last = (struct freeblock*)((char*)(newpg) + ((PGSIZE) / unitsz - 1) * unitsz);
         last->next = faptr;
         return alloc_small_object_pool(cache);
@@ -204,10 +203,10 @@ void* alloc_large_object_pool(struct kmem_cache* cache)
     if (fa == NULL)
     {
         // 扩容
-        struct lnode* newnode = init_large_object_pool(cache->size, cache->align, 1);
+        struct lnode* newnode = init_large_object_pool(cache->unitsz, 1);
         newnode->next = head;
         cache->head.lhead = newnode;
-        uint16 unitsz = ALIGN_UP(cache->size, cache->align);
+        uint16 unitsz = cache->unitsz;
         struct freeblock* last = (struct freeblock*)((char*)(newnode->curpage) + ((PGSIZE) / unitsz - 1) * unitsz);
         last->next = faptr;
         return alloc_large_object_pool(cache);
@@ -235,7 +234,7 @@ void free_small_object_pool(struct kmem_cache* cache, void* pa)
     }
     if (workptr == NULL)
         panic("kmem_cache_free: invalid pa.");
-    uint16 unitsz = ALIGN_UP(cache->size, cache->align);
+    uint16 unitsz = cache->unitsz;
     if (((uint64)pa - (uint64)pg) % unitsz != 0)
         panic("kmem_cache_free: invalid alignment.");
 
@@ -256,7 +255,7 @@ void free_large_object_pool(struct kmem_cache* cache, void* pa)
     }
     if (workptr == NULL)
         panic("kmem_cache_free: invalid pa.");
-    uint16 unitsz = ALIGN_UP(cache->size, cache->align);
+    uint16 unitsz = cache->unitsz;
     if (((uint64)pa - (uint64)pg) % unitsz != 0)
         panic("kmem_cache_free: invalid alignment.");
 
@@ -272,13 +271,13 @@ void slab_init()
     kmem_cache_create(&g_slab_32, "g_slab_32", 32, 32, 2);
     kmem_cache_create(&g_slab_64, "g_slab_64", 64, 64, 2);
     kmem_cache_create(&g_slab_128, "g_slab_128", 128, 128, 2);
-    kmem_cache_create(&g_slab_256, "g_slab_256", 256, 246, 1);
+    kmem_cache_create(&g_slab_256, "g_slab_256", 256, 256, 1);
     kmem_cache_create(&g_slab_512, "g_slab_512", 512, 512, 1);
 }
 
 void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 align, uint16 init_pgnum)
 {
-    if(align & (align - 1))
+    if(align == 0 || align & (align - 1))
         panic("kmem_cache_create: invalid alignment.");
 
     initlock(&(cache->lock), name);
@@ -286,16 +285,18 @@ void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 a
 
     cache->size = sz;
     cache->align = align;
+    cache->unitsz = ALIGN_UP(sz, align);
     if (sz > 16)
     {
-        cache->head.lhead = init_large_object_pool(sz, align, init_pgnum);
+        cache->head.lhead = init_large_object_pool(cache->unitsz, init_pgnum);
     }
     else
     {
-        cache->head.shead = init_small_object_pool(sz, align, init_pgnum);
+        cache->head.shead = init_small_object_pool(cache->unitsz, init_pgnum);
     }
 
     release(&cache->lock);
+    printf("%s initialized.\n", name);
 }
 
 void kmem_cache_destroy(struct kmem_cache* cache)
