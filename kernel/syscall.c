@@ -107,6 +107,7 @@ extern uint64 sys_gettimeofday(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_find(void);
 extern uint64 sys_sleep_for_signal(void);
+extern uint64 sys_wake_up_signal(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -136,7 +137,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_gettimeofday] sys_gettimeofday,
 [SYS_trace]   sys_trace,
 [SYS_find]   sys_find,
-[SYS_sleep_for_signal] sys_sleep_for_signal
+[SYS_sleep_for_signal] sys_sleep_for_signal,
+[SYS_wake_up_signal] sys_wake_up_signal,
 };
 
 static const char* syscallNames[] = 
@@ -166,6 +168,7 @@ static const char* syscallNames[] =
     [SYS_gettimeofday]  "sys_gettimeofday",
     [SYS_trace]         "sys_trace",
     [SYS_sleep_for_signal] "sys_sleep_for_signal",
+    [SYS_wake_up_signal] "sys_wake_up_signal",
 };
 
 void

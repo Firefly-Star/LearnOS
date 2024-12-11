@@ -4,7 +4,7 @@
 #include "types.h"
 
 // Mutual exclusion lock.
-struct spinlock {
+struct spinlock { // 24B
   uint locked;       // Is the lock held?
 
   // For debugging:

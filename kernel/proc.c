@@ -56,6 +56,7 @@ procinit(void)
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
       p->traceMask = 0;
+      p->wait_next = NULL;
   }
 }
 
@@ -171,6 +172,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   p->traceMask = 0;
+  p->wait_next = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -682,7 +684,8 @@ procdump(void)
   [SLEEPING]  "sleep ",
   [RUNNABLE]  "runble",
   [RUNNING]   "run   ",
-  [ZOMBIE]    "zombie"
+  [ZOMBIE]    "zombie",
+  [BLOCKED]   "blocked",
   };
   struct proc *p;
   char *state;

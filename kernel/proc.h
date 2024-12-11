@@ -85,7 +85,7 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE, BLOCKED };
 
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t;
@@ -115,6 +115,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   uint64 traceMask;            // 追踪的系统调用号
   int slot;                    // 调度所需的时间片
+  struct proc* wait_next;      // 处于阻塞队列时，它的下一个进程
 };
 
 struct procQueueNode

@@ -4,16 +4,11 @@
 #include "spinlock.h"
 #include "proc.h"
 
-struct proclist{
-    struct proc* current;
-    struct proclist* next;
-};
-
 struct sem_t{
-    struct spinlock lock;
-    struct proclist* first;
-    struct proclist* last;
-    uint32 value;
+    struct spinlock lock;   // 24B
+    struct proc* first;     // 8B
+    struct proc* last;      // 8B
+    uint32 value;           // 4B
 };
 
 struct sem_file{

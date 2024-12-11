@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "time.h"
 #include "trace.h"
+#include "semaphore.h"
+#include "slab.h"
 
 uint64
 sys_exit(void)
@@ -143,9 +145,71 @@ extern struct spinlock g_sem_lock;
 uint64
 sys_sleep_for_signal(void)
 {
-    uint64 sem_uptr;
-    argaddr(0, &sem_uptr);
+    uint64 raw_ptr;
+    argaddr(0, &raw_ptr);
     acquire(&g_sem_lock);
+    struct proc* p = myproc();
+    struct sem_t ksem;
+    copyin(p->pagetable, (char*)(&ksem), raw_ptr, sizeof(struct sem_t));
+    release(&g_sem_lock);
+
+    acquire(&ksem.lock);
+    if (ksem.first == NULL)
+    {
+        ksem.first = p;
+        ksem.last = p;
+        p->wait_next = NULL;
+    }
+    else
+    {
+        ksem.last->wait_next = p;
+        p->wait_next = NULL;
+    }
+    copyout(p->pagetable, raw_ptr, (char*)(&ksem), sizeof(struct sem_t));
+    release(&ksem.lock);
+
+    acquire(&p->lock);
+    p->state = BLOCKED;
+    sched();
+    release(&p->lock);
+
+    return 0;
+}
+
+uint64
+sys_wake_up_signal(void)
+{
+    uint64 raw_ptr;
+    argaddr(0, &raw_ptr);
+    struct proc* p = myproc();
+    struct sem_t ksem;
+    copyin(p->pagetable, (char*)(&ksem), raw_ptr, sizeof(struct sem_t));
+
+    acquire(&ksem.lock);
+    if (ksem.first == NULL)
+    {
+        panic("syss_wake_up_signal: empty queue.");
+    }
+    else
+    {
+        struct proc* p;
+        if (ksem.first == ksem.last)
+        {
+            p = ksem.first;
+            ksem.first = NULL;
+            ksem.last = NULL;
+        }
+        else
+        {
+            p = ksem.first;
+            ksem.first = ksem.first->wait_next;
+        }
+        acquire(&p->lock);
+        p->state = RUNNABLE;
+        release(&p->lock);
+    }
+    copyout(p->pagetable, raw_ptr, (char*)(&ksem), sizeof(struct sem_t));
+    release(&ksem.lock);
 
     return 0;
 }
