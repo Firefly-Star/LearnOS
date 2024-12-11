@@ -33,7 +33,8 @@ OBJS = \
   $K/trace.o \
   $K/slab.o \
   $K/semaphore.o \
-  $K/kmalloc.o
+  $K/kmalloc.o \
+  $K/shm.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -150,7 +151,8 @@ UPROGS=\
 	$U/_tracetest\
 	$U/_find\
 	$U/_heaptest\
-	$U/_spinlocktest
+	$U/_spinlocktest\
+	$U/_shmtest
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

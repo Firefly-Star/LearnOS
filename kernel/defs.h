@@ -223,3 +223,9 @@ void            sem_init();
 // kmalloc.c
 void*           kmalloc(uint64);
 void            kmfree(void*, uint64);
+
+// shm.c
+typedef int ipc_id;
+typedef uint64 key_t;
+ipc_id          shmget(key_t key, uint64 size, uint flag);
+void            shminit(void);

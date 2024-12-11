@@ -232,3 +232,15 @@ sys_sem_init(void)
     copyout(p->pagetable, raw_sem, (char*)(&ksem), sizeof(struct sem_t));
     return 0;
 }
+
+uint64
+sys_shmget()
+{
+    uint64 key;
+    uint64 size;
+    uint64 flag;
+    argaddr(0, &key);
+    argaddr(1, &size);
+    argaddr(2, &flag);
+    return shmget(key, size, (uint)flag);
+}

@@ -1,5 +1,6 @@
 #include "kernel/types.h"
 #include "kernel/semaphore.h"
+#include "kernel/shm.h"
 struct stat;
 struct timeVal;
 
@@ -30,6 +31,7 @@ int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
 int trace(uint64); // mask of syscall to trace.
 void sem_init(struct sem_t* sem, char* name, uint value); // 私有信号量的初始化
+int shmget(key_t key, uint64 size, int shmflg);
 
 // ulib.c
 int stat(const char*, struct stat*);
