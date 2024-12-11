@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -187,9 +189,11 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      // panic("uvmunmap: walk");
+      continue;
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      // panic("uvmunmap: not mapped");
+      continue;
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -227,6 +231,33 @@ uvmfirst(pagetable_t pagetable, uchar *src, uint sz)
   memset(mem, 0, PGSIZE);
   mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
   memmove(mem, src, sz);
+}
+
+int uvlazyalloc(pagetable_t pagetable, uint64 va){
+  char *mem;
+  mem = kalloc();
+  va = PGROUNDDOWN(va);
+
+  if (va > myproc()->sz) {
+    printf("va is greater than sz");
+    return -1;
+  }else if (va < myproc()->ustack_top){
+    printf("va is less than ustack_top");
+    return -1;
+  }
+
+  if (mem != 0) {
+    memset(mem, 0, PGSIZE);
+    if (mappages(pagetable, va, PGSIZE, (uint64)mem, PTE_R | PTE_U | PTE_W | PTE_X) != 0) {
+      printf("There is no page mapped");
+      kfree(mem);
+      uvmdealloc(pagetable, va, myproc()->sz);
+    }
+  } else {
+    printf("There is no enough memory");
+    return -1;
+  }
+  return 1;
 }
 
 // Allocate PTEs and physical memory to grow process from oldsz to
@@ -321,9 +352,11 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
+      // panic("uvmcopy: pte should exist");
+      continue;
     if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      // panic("uvmcopy: page not present");
+      continue;
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)

@@ -69,6 +69,13 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()/*1:设备中断,2:计时器中断,0:错误*/) != 0){
     // ok
+  } else if(r_scause() == 13 || r_scause() == 15){ // 加载页面与保存页面错误
+    uint64 va;
+    va = r_stval();
+    if (uvlazyalloc(p->pagetable, va) < 0) {
+      setkilled(p);
+    } 
+    
   } else {
     // 错误则kill这个进程
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
