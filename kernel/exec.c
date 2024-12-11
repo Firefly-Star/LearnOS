@@ -113,6 +113,7 @@ exec(char *path, char **argv)
   // argc is returned via the system call return
   // value, which goes in a0.
   p->trapframe->a1 = sp;
+  p->ustack_top = stackbase + USERSTACK*PGSIZE; // user stack top
 
   // Save program name for debugging.
   for(last=s=path; *s; s++)

@@ -47,8 +47,20 @@ sys_sbrk(void)
 
   argint(0, &n);
   addr = myproc()->sz;
-  if(growproc(n) < 0)
+
+  if(n>0){
+    myproc()->sz += n;
+  }else if (myproc()->sz > (uint64)(-n)) {
+    uvmdealloc(myproc()->pagetable, myproc()->sz, myproc()->sz + n);
+  }else {
     return -1;
+  }
+  
+  // Lazy allocation 先不进行内存分配
+  // if(growproc(n) < 0)
+  //   return -1;
+
+
   return addr;
 }
 
