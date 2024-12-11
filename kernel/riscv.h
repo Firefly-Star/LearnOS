@@ -3,10 +3,6 @@
 
 #ifndef __ASSEMBLER__
 
-#ifdef __GNUC__
-#define asm __asm__
-#endif
-
 // which hart (core) is this?
 static inline uint64
 r_mhartid()

@@ -219,6 +219,7 @@ uint32 buddy_getbitmap(uint64 pnum, uint32 order)
     return start[offset / 8] & mask;
 }
 
+// 需要先加锁!!!
 void* buddy_alloc(uint32 order)
 {
     if (order > MAX_ORDER)
@@ -247,6 +248,7 @@ void* buddy_alloc(uint32 order)
     return mem_block;
 }
 
+// 需要先加锁!!!
 void buddy_free(void* block_start, uint32 order)
 {
     uint64 pnum = pa_to_pnum(block_start);
@@ -321,4 +323,24 @@ kalloc(void)
     memset(result, 0, PGSIZE);
 
     return result;
+}
+
+void*
+kbuddy_alloc(uint32 order)
+{
+    void* result;
+
+    acquire(&buddy.lock);
+    result = buddy_alloc(order);
+    release(&buddy.lock);
+
+    return result;
+}
+
+void
+kbuddy_free(void *pa, uint32 order)
+{
+    acquire(&buddy.lock);
+    buddy_free(pa, order);
+    release(&buddy.lock);
 }

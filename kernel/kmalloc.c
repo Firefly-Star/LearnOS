@@ -21,7 +21,7 @@ void* kmalloc(uint64 sz)
         {
             ++order;
         }
-        return buddy_alloc(order);
+        return kbuddy_alloc(order);
     }
     else
     {
@@ -70,7 +70,7 @@ void kmfree(void* ptr, uint64 sz)
         {
             ++order;
         }
-        buddy_free(ptr, order);
+        kbuddy_free(ptr, order);
     }
     else
     {

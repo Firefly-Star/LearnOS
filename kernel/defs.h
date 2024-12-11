@@ -67,8 +67,8 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
-void*           buddy_alloc(uint32);
-void            buddy_free(void*, uint32);
+void*           kbuddy_alloc(uint32);
+void            kbuddy_free(void *, uint32);
 
 // log.c
 void            initlog(int, struct superblock*);
