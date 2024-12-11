@@ -21,6 +21,7 @@ struct kmem_cache g_slab_64;
 struct kmem_cache g_slab_128;
 struct kmem_cache g_slab_256;
 struct kmem_cache g_slab_512;
+struct kmem_cache g_slab_1024;
 
 struct kmem_cache g_slab_kmem_cache;
 
@@ -248,6 +249,7 @@ void slab_init()
     kmem_cache_create(&g_slab_128, "g_slab_128", 128, 128, 2);
     kmem_cache_create(&g_slab_256, "g_slab_256", 256, 256, 1);
     kmem_cache_create(&g_slab_512, "g_slab_512", 512, 512, 1);
+    kmem_cache_create(&g_slab_1024, "g_slab_1024", 1024, 1024, 1);
     kmem_cache_create(&g_slab_kmem_cache, "g_slab_kmem_cache", sizeof(struct kmem_cache), 8, 1);
 }
 
@@ -313,4 +315,5 @@ void kmem_cache_free(struct kmem_cache* cache, void* pa)
     {
         free_small_object_pool(cache, pa);
     }
+    release(&cache->lock);
 }

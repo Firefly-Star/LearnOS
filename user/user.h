@@ -1,4 +1,5 @@
 #include "kernel/types.h"
+#include "kernel/semaphore.h"
 struct stat;
 struct timeVal;
 
@@ -28,7 +29,7 @@ int getyear(void);
 int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
 int trace(uint64); // mask of syscall to trace.
-void find(char*, char*); // mask of syscall to trace.
+void sem_init(struct sem_t* sem, char* name, uint value); // 私有信号量的初始化
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -48,3 +49,9 @@ void *memcpy(void *, const void *, uint);
 // umalloc.c
 void* malloc(uint);
 void free(void*);
+
+// find.c
+void find(char*, char*); 
+
+// usem.c
+void sem_wait(struct sem_t*);

@@ -213,3 +213,22 @@ sys_wake_up_signal(void)
 
     return 0;
 }
+
+uint64
+sys_sem_init(void)
+{
+    uint64 raw_sem;
+    uint64 raw_name;
+    uint64 raw_value;
+    struct proc* p = myproc();
+    argaddr(0, &raw_sem);
+    argaddr(1, &raw_name);
+    argaddr(2, &raw_value);
+    struct sem_t ksem;
+    initlock(&ksem.lock, (char*)(raw_name));
+    ksem.first = NULL;
+    ksem.last = NULL;
+    ksem.value = raw_value;
+    copyout(p->pagetable, raw_sem, (char*)(&ksem), sizeof(struct sem_t));
+    return 0;
+}

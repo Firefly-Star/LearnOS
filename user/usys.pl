@@ -40,3 +40,4 @@ entry("uptime");
 entry("getyear");
 entry("gettimeofday");
 entry("trace");
+entry("sem_init");

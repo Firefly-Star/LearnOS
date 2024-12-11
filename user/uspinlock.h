@@ -3,7 +3,7 @@
 
 struct uspinlock
 {
-    int locked;
+    volatile int locked;
     char* name;
 };
 

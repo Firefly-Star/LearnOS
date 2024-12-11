@@ -3,19 +3,19 @@
 
 int main()
 {
-    struct uspinlock lk;
-    uinitlock(&lk, "uspinlock");
+    struct uspinlock* lk = (struct uspinlock*)malloc(sizeof(struct uspinlock));
+    uinitlock(lk, "uspinlock");
     if (fork())
     {
-        uacquire(&lk);
+        uacquire(lk);
         printf("parent proc.\n");
-        urelease(&lk);
+        urelease(lk);
     }
     else
     {
-        uacquire(&lk);
+        uacquire(lk);
         printf("child proc.\n");
-        urelease(&lk);
+        urelease(lk);
     }
     int childpid;
     wait(&childpid);

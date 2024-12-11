@@ -219,3 +219,7 @@ void            _trace(uint64 mask);
 // semaphore.c
 struct semaphore;
 void            sem_init();
+
+// kmalloc.c
+void*           kmalloc(uint64);
+void            kmfree(void*, uint64);

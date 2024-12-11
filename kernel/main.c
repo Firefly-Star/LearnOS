@@ -44,6 +44,15 @@ main()
         trapinithart();   // install kernel trap vector
         plicinithart();   // ask PLIC for device interrupts
     }
-
+    void* a[20];
+    for (int i = 0;i < 20; ++i)
+    {
+        a[i] = kmalloc(1 << i);
+    }
+    for (int i = 0;i < 20; ++i)
+    {
+        kmfree(a[i], 1 << i);
+    }
+    
     scheduler();        
 }
