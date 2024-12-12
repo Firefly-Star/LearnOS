@@ -228,10 +228,12 @@ void            kmfree(void*, uint64);
 // shm.c
 typedef int ipc_id;
 typedef uint64 key_t;
+struct          shmid_ds;
 void            shminit(void);
 ipc_id          shmget(key_t key, uint64 size, uint flag);
 void*           shmat(int shmid, const void* shmaddr, int shmflag);
 void            shmdt(struct proc* p, const void* shmaddr);
+int             shmctl(int shmid, int cmd, struct shmid_ds *buf);
 
 // uvapg.c
 struct          freeva;

@@ -1,17 +1,22 @@
 #ifndef IPC_H
 #define IPC_H
 
-typedef int key_t;
+// 命令
+#define IPC_SET         0
+#define IPC_RMID        1
+#define IPC_STAT        2
 
-struct ipc_resource{
-    key_t key;                      // 哈希表的键, 4B
-    void* resource;                 // 指向具体 IPC 资源的指针, 8B
-    struct ipc_resource* next;      // 链表的下一个节点, 8B
-}; // 20B
+// 属性
+#define IPC_EXCL        1U << 14
+#define IPC_CREATE      1U << 15
 
-#define TABLE_SIZE 1024
-struct ipc_hash_table{
-    struct ipc_resource* table[TABLE_SIZE];
-};// 20KB
+// 权限控制
+#define IPC_OWNER_MASK  15U << 8
+#define IPC_GROUP_MASK  15U << 4
+#define IPC_OTHER_MASK  15U
+#define IPC_R           1 << 2
+#define IPC_W           1 << 1
+#define IPC_X           1
+
 
 #endif

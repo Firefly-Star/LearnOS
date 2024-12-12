@@ -24,4 +24,11 @@ struct shmblock {
     enum shmstate   state;          // 该共享内存的状态
 };
 
+struct shmid_ds { // 用户用以修改和获取shmid信息的结构体
+    uint            sz;             // 共享内存段大小
+    int             ref_count;      // 当前附加的进程数
+    uint            flag;           // 权限
+    enum shmstate   state;          // 该共享内存的状态
+};
+
 #endif

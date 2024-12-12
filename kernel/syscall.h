@@ -29,3 +29,5 @@
 #define SYS_sem_init        28
 #define SYS_shmget          29
 #define SYS_shmat           30
+#define SYS_shmdt           31
+#define SYS_shmctl          32

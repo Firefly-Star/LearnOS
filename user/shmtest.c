@@ -1,5 +1,5 @@
 #include "user.h"
-#include "kernel/ipc.h"
+#include "kernel/IPC.h"
 
 int main()
 {
@@ -12,5 +12,7 @@ int main()
     void* ptr = shmat(x2, 0, 0);
     *((unsigned int*)(ptr)) = 100;
     printf("%lx\n", (uint64)ptr);
+    shmctl(x2, IPC_RMID, 0);
+
     exit(0);
 }

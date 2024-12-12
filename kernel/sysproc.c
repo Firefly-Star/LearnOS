@@ -9,6 +9,8 @@
 #include "trace.h"
 #include "semaphore.h"
 #include "slab.h"
+#include "shm.h"
+#include "IPC.h"
 
 uint64
 sys_exit(void)
@@ -268,4 +270,33 @@ sys_shmat(void)
     argaddr(2, &shmflag);
 
     return (uint64)(shmat((int)shmid, (void*)(shmaddr), (int)(shmflag)));
+}
+
+uint64 
+sys_shmdt(void)
+{
+    struct proc* p = myproc();
+    uint64 raw_addr;
+    argaddr(0, &raw_addr);
+    shmdt(p, (void*)(raw_addr));
+    return 0;
+}
+
+uint64
+sys_shmctl(void)
+{
+    struct proc* p = myproc();
+    uint64 shmid;
+    uint64 cmd;
+    uint64 raw_buf;
+    argaddr(0, &shmid);
+    argaddr(1, &cmd);
+    argaddr(2, &raw_buf);
+    struct shmid_ds mid;
+    int result = shmctl((int)(shmid), (int)(cmd), &mid);
+    if (cmd == IPC_STAT)
+    {
+        copyout(p->pagetable, raw_buf, (char*)(&mid), sizeof(struct shmid_ds));
+    }
+    return result;
 }

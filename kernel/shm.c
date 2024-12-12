@@ -1,7 +1,7 @@
 #include "shm.h"
 #include "defs.h"
 #include "proc.h"
-#include "ipc.h"
+#include "IPC.h"
 #include "riscv.h"
 
 struct shmblock shmid_pool[SHMMAX];
@@ -164,11 +164,41 @@ void shmdt(struct proc* p, const void* shmaddr)
     struct shmblock* shm = prev->next->shm;
     uvmunmap(p->pagetable, (uint64)(shmaddr), (shm->sz + PGSIZE - 1) / PGSIZE, 0);
     shm->ref_count -= 1;
-    if (shm->ref_count == 0)
+    if (shm->state == SHM_ZOMBIE && shm->ref_count == 0)
     {
-        // TODO: 当这块共享内存被标记为待销毁时，销毁它
+        printf("shm destructed.\n");
+        shm_reinit(shm);
     }
     struct proc_shmblock* newnext = prev->next->next;
     kmfree(prev->next, sizeof(struct proc_shmblock));
     prev->next = newnext;
+}
+
+int shmctl(int shmid, int cmd, struct shmid_ds *buf)
+{
+    if (shmid_pool[shmid].state == SHM_UNUSED)
+    {
+        return -1; // 无效的shmid
+    }
+    switch(cmd)
+    {
+        case IPC_SET: {
+            shmid_pool[shmid].flag = buf->flag;
+            break;
+        }
+        case IPC_RMID: {
+            shmid_pool[shmid].state = SHM_ZOMBIE;
+            break;
+        }
+        case IPC_STAT: {
+            buf->sz = shmid_pool[shmid].sz;
+            buf->ref_count = shmid_pool[shmid].ref_count;
+            buf->flag = shmid_pool[shmid].flag;
+            buf->state = shmid_pool[shmid].state;
+        }
+        default: {
+            return -2; // 未知的命令
+        }
+    }
+    return 0;
 }

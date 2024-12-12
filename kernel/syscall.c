@@ -111,6 +111,8 @@ extern uint64 sys_wake_up_signal(void);
 extern uint64 sys_sem_init(void);
 extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
+extern uint64 sys_shmdt(void);
+extern uint64 sys_shmctl(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -144,7 +146,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_wake_up_signal]    sys_wake_up_signal,
 [SYS_sem_init]          sys_sem_init,
 [SYS_shmget]            sys_shmget,
-[SYS_shmat]             sys_shmat
+[SYS_shmat]             sys_shmat,
+[SYS_shmctl]            sys_shmctl,
+[SYS_shmdt]             sys_shmdt
 };
 
 static const char* syscallNames[] = 
@@ -177,7 +181,9 @@ static const char* syscallNames[] =
 [SYS_wake_up_signal]        "sys_wake_up_signal",
 [SYS_sem_init]              "sys_sem_init",
 [SYS_shmget]                "sys_shmget",
-[SYS_shmat]                 "sys_shmat"
+[SYS_shmat]                 "sys_shmat",
+[SYS_shmdt]                 "sys_shmdt",
+[SYS_shmctl]                "sys_shmctl"
 };
 
 void
