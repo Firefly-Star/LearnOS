@@ -122,11 +122,11 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
     }
 
     // 内存映射
-    void* freeva;
+    void* freeva = NULL;
     if (shmaddr == NULL)
     {
         freeva = uallocva(p->freeva_head, npg);
-        mappages(p->pagetable, (uint64)(freeva), npg * PGSIZE, shmid_pool[shmid].ptr, PTE_U | perm);
+        mappages(p->pagetable, (uint64)(freeva), npg * PGSIZE, (uint64)(shmid_pool[shmid].ptr), PTE_U | perm);
     }
 
     return freeva;

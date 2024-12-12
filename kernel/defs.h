@@ -232,7 +232,7 @@ ipc_id          shmget(key_t key, uint64 size, uint flag);
 void            shminit(void);
 
 // uvapg.c
-struct          freeblock;
-void            init_freeblock(struct freeblock* head);
-void*           uallocva(struct freeblock* head, uint64 npg);
-void            ufreeva(struct freeblock* head, void* va, uint64 npg);
+struct          freeva;
+void            init_freeva(struct freeva* head);
+void*           uallocva(struct freeva* head, uint64 npg);
+void            ufreeva(struct freeva* head, void* va, uint64 npg);

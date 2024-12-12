@@ -5,20 +5,20 @@
 
 // TODO: 为每个进程维护自己的diy的slab
 
-void init_freeblock(struct freeblock* head)
+void init_freeva(struct freeva* head)
 {
     head->ptr =  ~0UL;
     head->npg = 0;
-    struct freeblock* first = (struct freeblock*)(kmalloc(sizeof(struct freeblock)));
+    struct freeva* first = (struct freeva*)(kmalloc(sizeof(struct freeva)));
     first->ptr = SHMTOP;
     first->next = NULL;
     first->npg = (SHMTOP - HEAPTOP) / PGSIZE;
     head->next = first;
 }
 
-void* uallocva(struct freeblock* head, uint64 npg)
+void* uallocva(struct freeva* head, uint64 npg)
 {
-    struct freeblock* workptr = head;
+    struct freeva* workptr = head;
     void* result;
     while(workptr->next != NULL && workptr->next->npg < npg)
     {
@@ -27,8 +27,8 @@ void* uallocva(struct freeblock* head, uint64 npg)
     if (workptr->next->npg == npg)
     {
         result = (void*)(workptr->next->ptr);
-        struct freeblock* newnext = workptr->next->next;
-        kmfree(workptr->next, sizeof(struct freeblock));
+        struct freeva* newnext = workptr->next->next;
+        kmfree(workptr->next, sizeof(struct freeva));
         workptr->next = newnext;
     }
     else
@@ -40,9 +40,9 @@ void* uallocva(struct freeblock* head, uint64 npg)
     return result;
 }
 
-void ufreeva(struct freeblock* head, void* va, uint64 npg)
+void ufreeva(struct freeva* head, void* va, uint64 npg)
 {
-    struct freeblock* workptr = head;
+    struct freeva* workptr = head;
     while(workptr->ptr > (uint64)(va) && (workptr->next == NULL || workptr->next->ptr < (uint64)(va)))
     {
         workptr = workptr->next;
@@ -56,7 +56,7 @@ void ufreeva(struct freeblock* head, void* va, uint64 npg)
         }
         else
         {
-            struct freeblock* newnode = (struct freeblock*)(kmalloc(sizeof(struct freeblock)));
+            struct freeva* newnode = (struct freeva*)(kmalloc(sizeof(struct freeva)));
             newnode->ptr = (uint64)(va);
             newnode->npg = npg;
             newnode->next = NULL;
@@ -71,8 +71,8 @@ void ufreeva(struct freeblock* head, void* va, uint64 npg)
         {
             // 合并三块内存
             workptr->npg = npg + workptr->npg + workptr->next->npg;
-            struct freeblock* newnext = workptr->next->next;
-            kmfree((void*)(workptr->next), sizeof(struct freeblock));
+            struct freeva* newnext = workptr->next->next;
+            kmfree((void*)(workptr->next), sizeof(struct freeva));
             workptr->next = newnext;
         }
         else
@@ -91,7 +91,7 @@ void ufreeva(struct freeblock* head, void* va, uint64 npg)
             else
             {
                 // 独立成块
-                struct freeblock* newnode = (struct freeblock*)(kmalloc(sizeof(struct freeblock)));
+                struct freeva* newnode = (struct freeva*)(kmalloc(sizeof(struct freeva)));
                 newnode->ptr = (uint64)(va);
                 newnode->npg = npg;
                 newnode->next = workptr->next;

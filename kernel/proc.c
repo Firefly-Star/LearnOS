@@ -333,7 +333,7 @@ fork(void)
 }
 
 // Pass p's abandoned children to init.
-// Caller must hold wait_lock.
+// Caller must hold wait_lock. TODO: 在proc中加入child字段，让reparent不再需要扫描所有的proc
 void
 reparent(struct proc *p)
 {
