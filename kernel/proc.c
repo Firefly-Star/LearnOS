@@ -57,7 +57,8 @@ procinit(void)
       p->kstack = KSTACK((int) (p - proc));
       p->traceMask = 0;
       p->wait_next = NULL;
-      
+      p->freeva_head = (struct freeva*)(kmalloc(sizeof(struct freeva)));
+      init_freeva(p->freeva_head);
   }
 }
 
@@ -174,6 +175,7 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   p->traceMask = 0;
   p->wait_next = 0;
+  init_freeva(p->freeva_head);
 }
 
 // Create a user page table for a given process, with no user memory,

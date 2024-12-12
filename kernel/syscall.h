@@ -28,3 +28,4 @@
 #define SYS_wake_up_signal  27
 #define SYS_sem_init        28
 #define SYS_shmget          29
+#define SYS_shmat           30

@@ -256,3 +256,16 @@ sys_shmget()
     argaddr(2, &flag);
     return shmget(key, size, (uint)flag);
 }
+
+uint64
+sys_shmat(void)
+{
+    uint64 shmid;
+    uint64 shmaddr;
+    uint64 shmflag;
+    argaddr(0, &shmid);
+    argaddr(1, &shmaddr);
+    argaddr(2, &shmflag);
+
+    return (uint64)(shmat((int)shmid, (void*)(shmaddr), (int)(shmflag)));
+}
