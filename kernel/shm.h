@@ -3,6 +3,8 @@
 
 #define SHMMAX 4096
 
+#define SHM_RDONLY 1
+
 #include "types.h"
 typedef int ipc_id;
 typedef uint64 key_t;

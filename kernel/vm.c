@@ -8,6 +8,20 @@
 #include "spinlock.h"
 #include "proc.h"
 
+// only for debug
+// 给定一个页表，看这个页表的一级页表有哪些是空余的
+void dumpfreepte(pagetable_t pagetable)
+{
+    printf("pagetable addr: %lx.\n", (uint64)pagetable);
+    for (int i = 0;i < 512; ++i)
+    {
+        if (*(pagetable + i) & PTE_V)
+        {
+            printf("valid pte addr: %lx, pte: %lx.\n", (uint64)(pagetable + i), PTE2PA(*(pagetable + i)));
+        }
+    }
+}
+
 /*
  * the kernel's page table.
  */
@@ -47,6 +61,8 @@ kvmmake(void)
 
   // allocate and map a kernel stack for each process.
   proc_mapstacks(kpgtbl);
+
+  dumpfreepte(kpgtbl);
   
   return kpgtbl;
 }
@@ -484,3 +500,4 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+

@@ -5,7 +5,8 @@
 
 int main()
 {
-    char* old = sbrk(0);
+    char* old = sbrk(1);
     printf("%lu", (uint64)(old));
+    sleep(100);
     exit(0);
 }

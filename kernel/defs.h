@@ -230,3 +230,9 @@ typedef int ipc_id;
 typedef uint64 key_t;
 ipc_id          shmget(key_t key, uint64 size, uint flag);
 void            shminit(void);
+
+// uvapg.c
+struct          freeblock;
+void            init_freeblock(struct freeblock* head);
+void*           uallocva(struct freeblock* head, uint64 npg);
+void            ufreeva(struct freeblock* head, void* va, uint64 npg);

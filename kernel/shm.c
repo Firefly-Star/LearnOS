@@ -1,6 +1,8 @@
 #include "shm.h"
 #include "defs.h"
+#include "proc.h"
 #include "ipc.h"
+#include "riscv.h"
 
 struct shmblock shmid_pool[SHMMAX];
 
@@ -80,4 +82,52 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
             return id;
         }
     }
+}
+
+// 目前shmaddr只能为0，即操作系统来自动分配地址
+// TODO: shmaddr不为0，即用户指定地址时，检查shmaddr是否有效
+// TODO: 拥有者/组用户/其他用户的权限区分。目前没有用户的概念，所有进程都是拥有者。
+void* shmat(int shmid, const void* shmaddr, int shmflag)
+{
+    struct proc* p = myproc();
+    if (shmid >= SHMMAX || shmid_pool[shmid].key == ~0UL)
+    {
+        p->errno = 1; // 无效的shmid
+        return NULL; 
+    }
+    uint64 npg = (shmid_pool[shmid].sz + PGSIZE - 1) / PGSIZE;
+    
+    // 权限处理
+    int perm, flag;
+    perm = 0;
+    if (1)
+    {
+        flag = (shmid_pool[shmid].flag & IPC_OWNER_MASK) >> 8;
+    }
+    if (shmflag & SHM_RDONLY)
+    {
+        flag &= (~IPC_W) & (~IPC_X);
+    }
+    if (flag & IPC_R)
+    {
+        perm |= PTE_R;
+    }
+    if (flag & IPC_W)
+    {
+        perm |= PTE_W;
+    }
+    if (flag & IPC_X)
+    {
+        perm |= PTE_X;
+    }
+
+    // 内存映射
+    void* freeva;
+    if (shmaddr == NULL)
+    {
+        freeva = uallocva(p->freeva_head, npg);
+        mappages(p->pagetable, (uint64)(freeva), npg * PGSIZE, shmid_pool[shmid].ptr, PTE_U | perm);
+    }
+
+    return freeva;
 }

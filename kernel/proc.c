@@ -57,6 +57,7 @@ procinit(void)
       p->kstack = KSTACK((int) (p - proc));
       p->traceMask = 0;
       p->wait_next = NULL;
+      
   }
 }
 
@@ -682,7 +683,7 @@ procdump(void)
   [UNUSED]    "unused",
   [USED]      "used",
   [SLEEPING]  "sleep ",
-  [RUNNABLE]  "runble",
+  [RUNNABLE]  "runable",
   [RUNNING]   "run   ",
   [ZOMBIE]    "zombie",
   [BLOCKED]   "blocked",
@@ -698,7 +699,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %s %s, stacktop: %lx, memsz: %lx", p->pid, state, p->name, p->ustack_top, p->sz);
     printf("\n");
   }
 }

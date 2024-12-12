@@ -3,6 +3,7 @@
 
 #include "param.h"
 #include "spinlock.h"
+#include "uvapg.h"
 
 // Saved registers for kernel context switches.
 struct context {
@@ -117,6 +118,8 @@ struct proc {
   uint64 traceMask;            // 追踪的系统调用号
   int slot;                    // 调度所需的时间片
   struct proc* wait_next;      // 处于阻塞队列时，它的下一个进程
+  struct freeblock* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
+  uint64 errno;
 };
 
 struct procQueueNode
