@@ -1,6 +1,7 @@
 #include "uvapg.h"
 #include "defs.h"
 #include "riscv.h"
+#include "shm.h"
 #include "memlayout.h"
 
 // TODO: 为每个进程维护自己的diy的slab
@@ -15,6 +16,7 @@ void init_freeva(struct freeva* head)
     first->npg = (SHMTOP - HEAPTOP) / PGSIZE;
     head->next = first;
 }
+
 
 void* uallocva(struct freeva* head, uint64 npg)
 {
@@ -98,5 +100,48 @@ void ufreeva(struct freeva* head, void* va, uint64 npg)
                 workptr->next = newnode;
             }
         }
+    }
+}
+
+void init_procshmblock(struct proc_shmblock* head)
+{
+    head->flag = 0;
+    head->va = NULL;
+    head->next = NULL;
+    head->shm = NULL;
+}
+
+void insert_procshmblock(struct proc_shmblock* head, struct proc_shmblock* newblock)
+{
+    newblock->next = head->next;
+    head->next = newblock;
+}
+
+struct proc_shmblock* findprev_procshmblock(struct proc_shmblock* head, ipc_id shmid,const void* va)
+{
+    struct proc_shmblock* prev = head;
+    if (shmid != NULL)
+    {
+        while(prev->next != NULL && prev->next->shm->id != shmid)
+        {
+            prev = prev->next;
+        }
+        if (prev->next == NULL)
+        {
+            panic("erase procshmblock");
+        }
+        return prev;
+    }
+    else
+    {
+        while(prev->next != NULL && prev->next->va != va)
+        {
+            prev = prev->next;
+        }
+        if (prev->next == NULL)
+        {
+            panic("erase procshmblock");
+        }
+        return prev;
     }
 }

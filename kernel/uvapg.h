@@ -12,4 +12,12 @@ struct freeva
     uint64 npg;
 };
 
+struct proc_shmblock
+{
+    uint flag;
+    void* va;
+    struct shmblock* shm;
+    struct proc_shmblock* next;
+};
+
 #endif

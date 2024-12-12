@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "uvapg.h"
 
 struct cpu cpus[NCPU];
 
@@ -59,6 +60,8 @@ procinit(void)
       p->wait_next = NULL;
       p->freeva_head = (struct freeva*)(kmalloc(sizeof(struct freeva)));
       init_freeva(p->freeva_head);
+      p->proc_shmhead = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
+      init_procshmblock(p->proc_shmhead);
   }
 }
 
@@ -153,6 +156,16 @@ found:
   return p;
 }
 
+// 分离进程中所有的共享内存
+void
+proc_freeshm(struct proc* p)
+{
+    while(p->proc_shmhead->next != NULL)
+    {
+        shmdt(p, p->proc_shmhead->next->va);        
+    }
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -163,7 +176,10 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
   if(p->pagetable)
+  {
+    proc_freeshm(p);
     proc_freepagetable(p->pagetable, p->sz);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -219,6 +235,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
+
   uvmfree(pagetable, sz);
 }
 

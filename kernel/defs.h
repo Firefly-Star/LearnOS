@@ -231,9 +231,14 @@ typedef uint64 key_t;
 void            shminit(void);
 ipc_id          shmget(key_t key, uint64 size, uint flag);
 void*           shmat(int shmid, const void* shmaddr, int shmflag);
+void            shmdt(struct proc* p, const void* shmaddr);
 
 // uvapg.c
 struct          freeva;
+struct          proc_shmblock;
 void            init_freeva(struct freeva* head);
 void*           uallocva(struct freeva* head, uint64 npg);
 void            ufreeva(struct freeva* head, void* va, uint64 npg);
+void            init_procshmblock(struct proc_shmblock* head);
+void            insert_procshmblock(struct proc_shmblock* head, struct proc_shmblock* newblock);
+struct proc_shmblock* findprev_procshmblock(struct proc_shmblock* head, ipc_id shmid, const void* va);
