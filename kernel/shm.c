@@ -23,6 +23,7 @@ void shminit()
 {
     for (int i = 0;i < SHMMAX; ++i)
     {
+        initlock(&shmid_pool[i].lk, "shmblock");
         shmid_pool[i].id = i;
         shmid_pool[i].key = 0;
         shmid_pool[i].ptr = NULL;
@@ -45,23 +46,33 @@ ipc_id shm_at(key_t key)
     ipc_id origin_id = id;
     ipc_id first_free = -1;
     int find_free = 0;
-    while(shmid_pool[id].key != key)
+    for (;;)
     {
+        acquire(&shmid_pool[id].lk);
+        if (shmid_pool[id].key == key)
+        {
+            release(&shmid_pool[id].lk);
+            break;
+        }
         if (!find_free && shmid_pool[id].state == SHM_UNUSED)
         {
             find_free = 1;
             first_free = id;
         }
+        release(&shmid_pool[id].lk);
         id = (id + 1) % SHMMAX;
         if (id == origin_id)
             break;
     }
+    acquire(&shmid_pool[id].lk);
     if (shmid_pool[id].key != key)
     { // 没找到
+        release(&shmid_pool[id].lk);
         return first_free;
     }
     else
     { // 找到了
+        release(&shmid_pool[id].lk);
         return id; 
     }
 }
@@ -75,6 +86,7 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
         {
             return -2; // 已有
         }
+        acquire(&shmid_pool[id].lk);
         if (shmid_pool[id].state == SHM_UNUSED)
         { // 创建一块新的共享内存，此时它的引用计数仍然为0
             void* pa = kmalloc(size);
@@ -83,21 +95,26 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
             shmid_pool[id].ptr = pa;
             shmid_pool[id].sz = size;
             shmid_pool[id].state = SHM_USED;
+            release(&shmid_pool[id].lk);
             return id;
         }
         else
         { // 返回已有的共享内存块号
+            release(&shmid_pool[id].lk);
             return id;
         }
     }
     else
     {
+        acquire(&shmid_pool[id].lk);
         if (shmid_pool[id].state == SHM_UNUSED)
         { // 不存在该键值的共享内存
+            release(&shmid_pool[id].lk);
             return -1;
         }
         else
         { // 返回已有的共享内存块号
+            release(&shmid_pool[id].lk);
             return id;
         }
     }
@@ -114,6 +131,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
         p->errno = 1; // 无效的shmid
         return NULL; 
     }
+    acquire(&shmid_pool[shmid].lk);
     uint64 npg = (shmid_pool[shmid].sz + PGSIZE - 1) / PGSIZE;
     
     // 权限处理
@@ -139,6 +157,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
     {
         perm |= PTE_X;
     }
+    release(&shmid_pool[shmid].lk);
 
     // 内存映射
     void* freeva = NULL;
@@ -163,12 +182,17 @@ void shmdt(struct proc* p, const void* shmaddr)
     struct proc_shmblock* prev = findprev_procshmblock(p->proc_shmhead, NULL, shmaddr);
     struct shmblock* shm = prev->next->shm;
     uvmunmap(p->pagetable, (uint64)(shmaddr), (shm->sz + PGSIZE - 1) / PGSIZE, 0);
+
+    acquire(&shm->lk);
     shm->ref_count -= 1;
     if (shm->state == SHM_ZOMBIE && shm->ref_count == 0)
     {
         printf("shm destructed.\n");
         shm_reinit(shm);
     }
+    release(&shm->lk);
+
+
     struct proc_shmblock* newnext = prev->next->next;
     kmfree(prev->next, sizeof(struct proc_shmblock));
     prev->next = newnext;
@@ -176,8 +200,14 @@ void shmdt(struct proc* p, const void* shmaddr)
 
 int shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
+    if (shmid < 0 || shmid >= SHMMAX)
+    {
+        return -1; // 无效的shmid
+    }
+    acquire(&shmid_pool[shmid].lk);
     if (shmid_pool[shmid].state == SHM_UNUSED)
     {
+        release(&shmid_pool[shmid].lk);
         return -1; // 无效的shmid
     }
     switch(cmd)
@@ -197,8 +227,10 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
             buf->state = shmid_pool[shmid].state;
         }
         default: {
+            release(&shmid_pool[shmid].lk);
             return -2; // 未知的命令
         }
     }
+    release(&shmid_pool[shmid].lk);
     return 0;
 }
