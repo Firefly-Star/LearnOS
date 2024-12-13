@@ -320,6 +320,7 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  uvmcopy_shm(p, np);
   np->sz = p->sz;
 
   // copy saved user registers.

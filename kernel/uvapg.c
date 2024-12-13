@@ -13,7 +13,7 @@ void init_freeva(struct freeva* head)
     struct freeva* first = (struct freeva*)(kmalloc(sizeof(struct freeva)));
     first->ptr = SHMTOP;
     first->next = NULL;
-    first->npg = (SHMTOP - HEAPTOP) / PGSIZE;
+    first->npg = (SHMTOP - HEAPTOP) / PGSIZE + 1;
     head->next = first;
 }
 

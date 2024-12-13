@@ -196,6 +196,7 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 int             uvlazyalloc(pagetable_t, uint64);
+void            uvmcopy_shm(struct proc* old, struct proc* new);
 
 // plic.c
 void            plicinit(void);

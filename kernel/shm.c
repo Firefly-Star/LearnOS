@@ -135,8 +135,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
     uint64 npg = (shmid_pool[shmid].sz + PGSIZE - 1) / PGSIZE;
     
     // 权限处理
-    int perm, flag;
-    perm = 0;
+    int flag;
     if (1)
     {
         flag = (shmid_pool[shmid].flag & IPC_OWNER_MASK) >> 8;
@@ -145,18 +144,6 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
     {
         flag &= (~IPC_W) & (~IPC_X);
     }
-    if (flag & IPC_R)
-    {
-        perm |= PTE_R;
-    }
-    if (flag & IPC_W)
-    {
-        perm |= PTE_W;
-    }
-    if (flag & IPC_X)
-    {
-        perm |= PTE_X;
-    }
     release(&shmid_pool[shmid].lk);
 
     // 内存映射
@@ -164,7 +151,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
     if (shmaddr == NULL)
     {
         freeva = uallocva(p->freeva_head, npg);
-        mappages(p->pagetable, (uint64)(freeva), npg * PGSIZE, (uint64)(shmid_pool[shmid].ptr), PTE_U | perm);
+        mappages(p->pagetable, (uint64)(freeva), npg * PGSIZE, (uint64)(shmid_pool[shmid].ptr), PTE_U | flag);
         // 记录到进程的共享内存块链表中
         struct proc_shmblock* newblock = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
         newblock->flag = flag;
@@ -218,6 +205,11 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
         }
         case IPC_RMID: {
             shmid_pool[shmid].state = SHM_ZOMBIE;
+            if (shmid_pool[shmid].ref_count == 0)
+            {
+                printf("shm destructed.\n");
+                shm_reinit(shmid_pool + shmid);
+            }
             break;
         }
         case IPC_STAT: {

@@ -7,6 +7,7 @@
 #include "fs.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "shm.h"
 
 // only for debug
 // 给定一个页表，看这个页表的一级页表有哪些是空余的
@@ -388,6 +389,34 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
  err:
   uvmunmap(new, 0, i / PGSIZE, 1);
   return -1;
+}
+
+// 共享内存段的复制
+// 仅仅是复制页表项就够了
+// 只会在fork系列函数中被调用
+void uvmcopy_shm(struct proc* old, struct proc* new)
+{
+    struct proc_shmblock* workptr = old->proc_shmhead->next;
+    while(workptr != NULL)
+    {
+        void* va = workptr->va;
+        uint flag = workptr->flag;
+        
+        acquire(&workptr->shm->lk);
+        void* pa = workptr->shm->ptr;
+        uint sz = workptr->shm->sz;
+        mappages(new->pagetable, (uint64)(va), (sz + PGSIZE - 1) & (~(PGSIZE - 1)), (uint64)(pa), PTE_U | flag);
+        workptr->shm->ref_count += 1;
+        release(&workptr->shm->lk);
+        
+        struct proc_shmblock* newblock = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
+        newblock->flag = workptr->flag;
+        newblock->next = workptr->next;
+        newblock->shm = workptr->shm;
+        newblock->va = workptr->va;
+        insert_procshmblock(new->proc_shmhead, newblock);
+        workptr = workptr->next;
+    }
 }
 
 // mark a PTE invalid for user access.
