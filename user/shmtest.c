@@ -7,12 +7,12 @@ int main()
     int x2 = shmget(1, 1000, 0);
     int x3 = shmget(4097, 200, IPC_CREATE | IPC_EXCL);
     void* ptr = shmat(x2, 0, 0);
-    if (fork())
+    if (vfork())
     {
-        //printf("%d, %d, %d\n", x1, x2, x3);
+        printf("%d, %d, %d\n", x1, x2, x3);
         *((unsigned int*)(ptr)) = 100;
-        //printf("%lx\n", (uint64)ptr);
-        //printf("parent proc shm content: %lu.\n", *((uint64*)(ptr)));
+        printf("%lx\n", (uint64)ptr);
+        printf("parent proc shm content: %lu.\n", *((uint64*)(ptr)));
         shmctl(x2, IPC_RMID, 0);
     }
     else

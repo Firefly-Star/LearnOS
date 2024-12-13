@@ -35,7 +35,7 @@ int shmget(key_t key, uint64 size, int shmflg);
 void* shmat(ipc_id shmid, const void* shmaddr, int shmflag);
 void shmdt(void* shmaddr);
 int shmctl(int shmid, int cmd, struct shmid_ds *buf);
-
+int vfork(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

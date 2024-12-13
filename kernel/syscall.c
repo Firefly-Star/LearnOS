@@ -113,6 +113,7 @@ extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
 extern uint64 sys_shmctl(void);
+extern uint64 sys_vfork(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -148,7 +149,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_shmget]            sys_shmget,
 [SYS_shmat]             sys_shmat,
 [SYS_shmctl]            sys_shmctl,
-[SYS_shmdt]             sys_shmdt
+[SYS_shmdt]             sys_shmdt,
+[SYS_vfork]             sys_vfork,
 };
 
 static const char* syscallNames[] = 
@@ -183,7 +185,8 @@ static const char* syscallNames[] =
 [SYS_shmget]                "sys_shmget",
 [SYS_shmat]                 "sys_shmat",
 [SYS_shmdt]                 "sys_shmdt",
-[SYS_shmctl]                "sys_shmctl"
+[SYS_shmctl]                "sys_shmctl",
+[SYS_vfork]                 "sys_vfork"
 };
 
 void

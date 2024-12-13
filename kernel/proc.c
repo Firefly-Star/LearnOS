@@ -352,6 +352,17 @@ fork(void)
   return pid;
 }
 
+// 阻塞父进程，直至子进程exit或者exec
+int vfork()
+{
+    int cpid = fork();
+    struct proc* p = myproc();
+    acquire(&wait_lock);
+    sleep(p, &wait_lock);
+    release(&wait_lock);
+    return cpid;
+}
+
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock. TODO: 在proc中加入child字段，让reparent不再需要扫描所有的proc
 void

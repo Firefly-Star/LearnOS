@@ -300,3 +300,9 @@ sys_shmctl(void)
     }
     return result;
 }
+
+uint64
+sys_vfork(void)
+{
+    return vfork();
+}
