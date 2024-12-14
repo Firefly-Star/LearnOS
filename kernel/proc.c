@@ -193,6 +193,7 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   p->traceMask = 0;
   p->wait_next = 0;
+  p->priority = 0;
   init_freeva(p->freeva_head);
 }
 
@@ -349,6 +350,10 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  release(&np->lock);
+
+  acquire(&np->lock);
+  np->priority = 1;
   release(&np->lock);
 
   return pid;
