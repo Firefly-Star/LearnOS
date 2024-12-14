@@ -499,15 +499,12 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
-        if (pmax == 0){
+        if (!found || p->priority > pmax->priority){
+          if (found){
+            release(&pmax->lock);
+          }
           pmax = p;
           found = 1;
-          continue;
-        }else if (p->priority > pmax->priority) {
-          release(&pmax->lock);
-          pmax = p;
-          found = 1;
-          continue;
         }
       }
       release(&p->lock);
