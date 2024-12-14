@@ -505,9 +505,12 @@ scheduler(void)
           }
           pmax = p;
           found = 1;
+        }else {
+          release(&p->lock);
         }
+      }else {
+        release(&p->lock);
       }
-      release(&p->lock);
     }
 
     if (found){
