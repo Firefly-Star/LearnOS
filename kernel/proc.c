@@ -132,6 +132,8 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  p->priority = 2;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -491,19 +493,29 @@ scheduler(void)
     // turned off; enable them to avoid a deadlock if all
     // processes are waiting.
     intr_on();
-
+    struct proc *pmax = 0;
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
+      if(p->state != RUNNABLE) continue;
+
+      if (pmax == 0 || p->priority > pmax->priority) {
+        pmax = p;
+      }
+
+      p = pmax;
       acquire(&p->lock);
-      if(p->state == RUNNABLE) {
+      if(p->state == RUNNABLE) { // wired
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        swtch(&c->context, &p->context);
+
+        // printf("pid: %d, priority: %d\n", p->pid, p->priority);
+
         // swtch中会直接ret到p->context的ra中，即会在这里隐式地跳出函数，
         // 直到下一次计时器中断后又回到这里继续进行循环。
+        swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -733,4 +745,21 @@ procdump(void)
     printf("%d %s %s, stacktop: %lx, memsz: %lx", p->pid, state, p->name, p->ustack_top, p->sz);
     printf("\n");
   }
+}
+
+// set the priority of a process
+int set_priority(int pid, int priority)
+{
+    struct proc *p=0;
+    for (p = proc; p < &proc[NPROC]; p++) {
+        if (p->pid == pid) {
+          acquire(&p->lock);
+          p->priority = priority;
+          release(&p->lock);
+          return 0;
+        }
+    }
+
+    printf("cannot find process %d\n", pid);
+    return -1;
 }

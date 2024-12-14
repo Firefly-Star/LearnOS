@@ -120,6 +120,7 @@ struct proc {
   struct proc* wait_next;      // 处于阻塞队列时，它的下一个进程
   struct freeva* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
   struct proc_shmblock* proc_shmhead;   // 进程所拥有的共享内存链表首指针
+  int priority;                         // 进程优先级
   uint64 errno;
 };
 
