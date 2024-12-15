@@ -62,9 +62,9 @@ struct semid_ds // 用户用以修改和获取semid信息的结构体
 
 union semun // semctl的参数
 {
-    int             val;
+    int16           val;
     struct semid_ds*  buf;
-    uint16*         array;
+    int16*          array;
 };
 
 struct sem_t

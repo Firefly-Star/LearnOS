@@ -189,7 +189,8 @@ int semop(int semid, struct sembuf* sops, uint nsops)
     return 0;
 }
 
-int semctl(int semid, int semnum, int cmd, uint64 arg)
+// 依旧没有做权限管理。主要是没有区分用户
+int semctl(int semid, int semnum, int cmd, uint64 arg) // 我可以信任你吗? union?
 {
     if (semid > SEMMAX)
     {
@@ -202,6 +203,69 @@ int semctl(int semid, int semnum, int cmd, uint64 arg)
         release(&semid_pool[semid].lk);
         return -2; // 无效的semid
     }
+
+    union semun un;
+    struct proc* p = myproc();
+    switch(cmd)
+    {
+        case IPC_RMID:
+        {
+            semid_pool[semid].state = IPC_ZOMBIE;
+            // TODO: 当引用计数为0时销毁
+            break;
+        }
+        case IPC_STAT:
+        {
+            un.buf = (struct semid_ds*)(arg);
+            struct semid_ds ds;
+            ds.flag = semid_pool[semid].flag;
+            ds.ref_count = semid_pool[semid].ref_count;
+            ds.state = semid_pool[semid].state;
+            ds.sz = semid_pool[semid].sz;
+            copyout(p->pagetable, (uint64)(un.buf), (char*)(&ds), sizeof(struct semid_ds));
+            break;
+        }
+        case GETALL:
+        {
+            un.array = (int16*)(arg);
+            int16* ar = (int16*)(kmalloc(sizeof(int16) * semid_pool[semid].sz));
+            for (int i = 0;i < semid_pool[semid].sz; ++i)
+            {
+                ar[i] = semid_pool[semid].ptr[i].value;
+            }
+            copyout(p->pagetable, (uint64)(un.array), (char*)(ar), sizeof(int16) * semid_pool[semid].sz);
+            kmfree(ar, sizeof(int16) * semid_pool[semid].sz);
+            break;
+        }
+        case GETVAL:
+        {
+            int16 v = semid_pool[semid].ptr[semnum].value;
+            return v;
+        }
+        case SETALL:
+        {
+            un.array = (int16*)(arg);
+            int16* ar = (int16*)(kmalloc(sizeof(int16) * semid_pool[semid].sz));
+            copyin(p->pagetable, (char*)(ar), (uint64)(un.array), sizeof(int16) * semid_pool[semid].sz);
+            for (int i = 0;i < semid_pool[semid].sz; ++i)
+            {
+                semid_pool[semid].ptr[i].value = ar[i];
+            }
+            kmfree(ar, sizeof(int16) * semid_pool[semid].sz);
+            break;
+        }
+        case SETVAL:
+        {
+            un.val = (int16)(arg);
+            semid_pool[semid].ptr[semnum].value = un.val;
+            break;
+        }
+        default:
+        {
+            return -1; // 未知的cmd
+        }
+    }
     release(&semid_pool[semid].lk);
+
     return 0;
 }

@@ -5,10 +5,9 @@
 int main()
 {
     int semid = semget(100, 1, IPC_CREATE | 0x666);
-    struct sembuf op;
-    op.sem_index = 0;
-    op.sem_op = 1;
-    semop(semid, &op, 1);
+    union semun arg;
+    arg.val = 1;
+    semctl(semid, 0, SETVAL, arg);
     printf("%d\n", semid);
     if(fork())
     {
