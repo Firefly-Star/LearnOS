@@ -121,6 +121,7 @@ struct proc {
   struct freeva* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
   struct proc_shmblock* proc_shmhead;   // 进程所拥有的共享内存链表首指针
   uint64 errno;
+  int vforked;
 };
 
 struct procQueueNode

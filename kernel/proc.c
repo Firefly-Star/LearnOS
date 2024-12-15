@@ -62,6 +62,7 @@ procinit(void)
       init_freeva(p->freeva_head);
       p->proc_shmhead = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
       init_procshmblock(p->proc_shmhead);
+      p->vforked = 0;
   }
 }
 
@@ -156,6 +157,42 @@ found:
   return p;
 }
 
+// static struct proc*
+// allocproc_v(void)
+// {
+//   struct proc *p;
+
+//   for(p = proc; p < &proc[NPROC]; p++) {
+//     acquire(&p->lock);
+//     if(p->state == UNUSED) {
+//       goto found;
+//     } else {
+//       release(&p->lock);
+//     }
+//   }
+//   return 0;
+
+// found:
+//   p->pid = allocpid();
+//   p->state = USED;
+
+//   // vfork的进程有自己的陷阱帧
+//   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+//     freeproc(p);
+//     release(&p->lock);
+//     return 0;
+//   }
+
+//   // vfork的进程不需要自己的页表
+
+//   // vfork的进程有自己的cpu的context
+//   memset(&p->context, 0, sizeof(p->context));
+//   p->context.ra = (uint64)forkret;
+//   p->context.sp = p->kstack + PGSIZE;
+
+//   return p;
+// }
+
 // 分离进程中所有的共享内存
 void
 proc_freeshm(struct proc* p)
@@ -177,7 +214,10 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
   {
-    proc_freeshm(p);
+    if (!p->vforked)
+    {
+        proc_freeshm(p);
+    }
     proc_freepagetable(p->pagetable, p->sz);
   }
   p->pagetable = 0;
@@ -192,6 +232,7 @@ freeproc(struct proc *p)
   p->traceMask = 0;
   p->wait_next = 0;
   init_freeva(p->freeva_head);
+  p->vforked = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -353,13 +394,69 @@ fork(void)
 }
 
 // 阻塞父进程，直至子进程exit或者exec
+// 子进程共享父进程的内存空间，即共用同一个页表
+// 因此子进程对堆栈的所有操作都会反映在父进程中
 int vfork()
 {
-    int cpid = fork();
+    // int i, pid;
+    // struct proc *np;
+    // struct proc *p = myproc();
+
+    // // Allocate process.
+    // if((np = allocproc_v()) == 0){
+    //     return -1;
+    // }
+
+    // np->traceMask = p->traceMask;
+
+    // // Copy user memory from parent to child.
+    // // 直接使用父进程的页表
+    // np->pagetable = p->pagetable;
+
+    // // 使用父进程的shm块
+    // np->proc_shmhead->next = p->proc_shmhead->next;
+
+    // // 使用父进程的shm地址管理块
+    // np->freeva_head->next = p->freeva_head->next;
+    // np->sz = p->sz;
+
+    // // copy saved user registers.
+    // *(np->trapframe) = *(p->trapframe);
+
+    // // Cause fork to return 0 in the child.
+    // np->trapframe->a0 = 0;
+
+    // // increment reference counts on open file descriptors.
+    // for(i = 0; i < NOFILE; i++)
+    //     if(p->ofile[i])
+    //     np->ofile[i] = filedup(p->ofile[i]);
+    // np->cwd = idup(p->cwd);
+
+    // safestrcpy(np->name, p->name, sizeof(p->name));
+
+    // pid = np->pid;
+
+    // release(&np->lock);
+
+    // acquire(&wait_lock);
+    // np->parent = p;
+    // release(&wait_lock);
+
+    // acquire(&np->lock);
+    // np->state = RUNNABLE;
+    // release(&np->lock);
+
+    // acquire(&p->lock);
+    // p->state = SLEEPING;
+    // sched();
+    // release(&p->lock);
+
+    // return pid;
     struct proc* p = myproc();
+    int cpid = fork();
     acquire(&wait_lock);
     sleep(p, &wait_lock);
-    release(&wait_lock);
+    release(&wait_lock);    
     return cpid;
 }
 
