@@ -247,8 +247,10 @@ struct proc_shmblock* findprev_procshmblock(struct proc_shmblock* head, ipc_id s
 
 // semaphore.c
 struct          sembuf;
+union           semun;
 void            seminit();
 ipc_id          semget(key_t key, uint64 size, uint flag);
 int             semop(int semid, struct sembuf* sops, uint nsops);
+int             semctl(int semid, int semnum, int cmd, uint64 un);
 
 #endif

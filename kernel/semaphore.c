@@ -88,6 +88,8 @@ ipc_id semget(key_t key, uint64 size, uint flag)
         if (semid_pool[id].state == IPC_UNUSED)
         { // 创建一个size大小的sem数组
             struct sem* sem = (struct sem*)kmalloc(size * sizeof(struct sem));
+            memset(sem, 0, size * sizeof(struct sem));
+
             semid_pool[id].flag = flag & (IPC_OWNER_MASK | IPC_OTHER_MASK | IPC_GROUP_MASK);
             semid_pool[id].key = key;
             semid_pool[id].ptr = sem;
@@ -187,3 +189,19 @@ int semop(int semid, struct sembuf* sops, uint nsops)
     return 0;
 }
 
+int semctl(int semid, int semnum, int cmd, uint64 arg)
+{
+    if (semid > SEMMAX)
+    {
+        return -1; // 越界
+    }
+
+    acquire(&semid_pool[semid].lk);
+    if (semid_pool[semid].state == IPC_UNUSED)
+    {
+        release(&semid_pool[semid].lk);
+        return -2; // 无效的semid
+    }
+    release(&semid_pool[semid].lk);
+    return 0;
+}

@@ -306,3 +306,42 @@ sys_vfork(void)
 {
     return vfork();
 }
+
+uint64
+sys_semget(void)
+{
+    uint64 key;
+    uint64 size;
+    uint64 flag;
+    argaddr(0, &key);
+    argaddr(1, &size);
+    argaddr(2, &flag);
+    return semget(key, size, (uint)(flag));
+}
+
+uint64
+sys_semop(void)
+{
+    uint64 semid;
+    uint64 sops;
+    uint64 nsops;
+    argaddr(0, &semid);
+    argaddr(1, &sops);
+    argaddr(2, &nsops);
+    return semop((int)(semid), (struct sembuf*)(sops), (uint)(nsops));
+}
+
+uint64
+sys_semctl(void)
+{
+    uint64 semid;
+    uint64 semnum;
+    uint64 cmd;
+    uint64 un;
+
+    argaddr(0, &semid);
+    argaddr(1, &semnum);
+    argaddr(2, &cmd);
+    argaddr(3, &un);
+    return semctl((int)(semid), (int)(semnum), (int)(cmd), un);
+}

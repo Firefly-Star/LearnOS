@@ -5,8 +5,15 @@
 #include "proc.h"
 #include "ipc_hash.h"
 #include "IPC.h"
+#include "types.h"
 
 #define SEMMAX 4096
+
+#define GETALL 65
+#define GETVAL 66
+#define SETVAL 67
+#define SETALL 68
+
 typedef int ipc_id;
 
 struct wait_queue_node
@@ -30,7 +37,7 @@ struct sem
 struct sembuf
 {
     uint        sem_index;
-    uint16      sem_op;
+    int16       sem_op;
     uint16      sem_flg;
 };
 
@@ -51,6 +58,13 @@ struct semid_ds // 用户用以修改和获取semid信息的结构体
     int             ref_count;      
     uint            flag;           
     enum ipcstate   state;          
+};
+
+union semun // semctl的参数
+{
+    int             val;
+    struct semid_ds*  buf;
+    uint16*         array;
 };
 
 struct sem_t

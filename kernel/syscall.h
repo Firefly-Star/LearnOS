@@ -32,3 +32,6 @@
 #define SYS_shmdt           31
 #define SYS_shmctl          32
 #define SYS_vfork           33
+#define SYS_semget          34
+#define SYS_semop           35
+#define SYS_semctl          36

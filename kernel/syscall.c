@@ -114,6 +114,9 @@ extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
 extern uint64 sys_shmctl(void);
 extern uint64 sys_vfork(void);
+extern uint64 sys_semget(void);
+extern uint64 sys_semop(void);
+extern uint64 sys_semctl(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -151,6 +154,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_shmctl]            sys_shmctl,
 [SYS_shmdt]             sys_shmdt,
 [SYS_vfork]             sys_vfork,
+[SYS_semget]            sys_semget,
+[SYS_semop]             sys_semop,
+[SYS_semctl]            sys_semctl
 };
 
 static const char* syscallNames[] = 
@@ -186,7 +192,10 @@ static const char* syscallNames[] =
 [SYS_shmat]                 "sys_shmat",
 [SYS_shmdt]                 "sys_shmdt",
 [SYS_shmctl]                "sys_shmctl",
-[SYS_vfork]                 "sys_vfork"
+[SYS_vfork]                 "sys_vfork",
+[SYS_semget]                "sys_semget",
+[SYS_semop]                 "sys_semop",
+[SYS_semctl]                "sys_semctl"
 };
 
 void
@@ -206,7 +215,7 @@ syscall(void)
     }
     p->trapframe->a0 = syscalls[num]();
   } else {
-    printf("%d %s: unknown sys call %d\n",
+    printf("pid: %d, name: %s: unknown sys call %d\n",
             p->pid, p->name, num);
     p->trapframe->a0 = -1;
   }

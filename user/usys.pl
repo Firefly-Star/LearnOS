@@ -46,3 +46,6 @@ entry("shmat");
 entry("shmdt");
 entry("shmctl");
 entry("vfork");
+entry("semget");
+entry("semop");
+entry("semctl");

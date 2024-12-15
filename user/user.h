@@ -36,6 +36,9 @@ void* shmat(ipc_id shmid, const void* shmaddr, int shmflag);
 void shmdt(void* shmaddr);
 int shmctl(int shmid, int cmd, struct shmid_ds *buf);
 int vfork(void);
+int semget(key_t key, uint64 size, uint flag);
+int semop(int semid, struct sembuf* sops, uint nsops);
+int semctl(int semid, int semnum, int cmd, uint64 un);
 
 // ulib.c
 int stat(const char*, struct stat*);
