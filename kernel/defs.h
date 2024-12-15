@@ -1,4 +1,8 @@
+#ifndef DEFS_H
+#define DEFS_H
+
 #include "types.h"
+#include "ipc_hash.h"
 
 struct buf;
 struct context;
@@ -224,8 +228,6 @@ void*           kmalloc(uint64);
 void            kmfree(void*, uint64);
 
 // shm.c
-typedef int ipc_id;
-typedef uint64 key_t;
 struct          shmid_ds;
 void            shminit(void);
 ipc_id          shmget(key_t key, uint64 size, uint flag);
@@ -242,3 +244,11 @@ void            ufreeva(struct freeva* head, void* va, uint64 npg);
 void            init_procshmblock(struct proc_shmblock* head);
 void            insert_procshmblock(struct proc_shmblock* head, struct proc_shmblock* newblock);
 struct proc_shmblock* findprev_procshmblock(struct proc_shmblock* head, ipc_id shmid, const void* va);
+
+// semaphore.c
+struct          sembuf;
+void            seminit();
+ipc_id          semget(key_t key, uint64 size, uint flag);
+int             semop(int semid, struct sembuf* sops, uint nsops);
+
+#endif

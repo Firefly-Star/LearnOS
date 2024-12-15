@@ -44,11 +44,12 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
     ipc_id id = shm_at(key);
     if (flag & IPC_CREATE)
     {
+        acquire(&shmid_pool[id].lk);
         if ((flag & IPC_EXCL) && (shmid_pool[id].state != IPC_UNUSED))
         {
+            release(&shmid_pool[id].lk);
             return -2; // 已有
         }
-        acquire(&shmid_pool[id].lk);
         if (shmid_pool[id].state == IPC_UNUSED)
         { // 创建一块新的共享内存，此时它的引用计数仍然为0
             void* pa = kmalloc(size);
@@ -88,12 +89,18 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
 void* shmat(int shmid, const void* shmaddr, int shmflag)
 {
     struct proc* p = myproc();
-    if (shmid >= SHMMAX || shmid_pool[shmid].state == IPC_UNUSED)
+    if (shmid >= SHMMAX)
     {
-        p->errno = 1; // 无效的shmid
+        p->errno = 2; // shmid越界
         return NULL; 
     }
     acquire(&shmid_pool[shmid].lk);
+    if (shmid_pool[shmid].state == IPC_UNUSED)
+    {
+        release(&shmid_pool[shmid].lk);
+        p->errno = 1; // 无效的shmid
+        return NULL;
+    }
     uint64 npg = (shmid_pool[shmid].sz + PGSIZE - 1) / PGSIZE;
     
     // 权限处理

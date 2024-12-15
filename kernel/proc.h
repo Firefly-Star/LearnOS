@@ -117,12 +117,12 @@ struct proc {
   char name[16];               // Process name (debugging)
   uint64 traceMask;            // 追踪的系统调用号
   int slot;                    // 调度所需的时间片
-  struct proc* wait_next;      // 处于阻塞队列时，它的下一个进程
   struct freeva* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
   struct proc_shmblock* proc_shmhead;   // 进程所拥有的共享内存链表首指针
   int priority;                         // 进程优先级
   uint64 errno;
   int vforked;
+  int sem_want;                 // 进程被sem阻塞前，所期望的资源数量
 };
 
 struct procQueueNode
