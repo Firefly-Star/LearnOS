@@ -18,5 +18,9 @@
 #define IPC_W           1 << 2
 #define IPC_X           1 << 3
 
+enum ipcstate
+{
+    IPC_UNUSED, IPC_ZOMBIE, IPC_USED
+};
 
 #endif

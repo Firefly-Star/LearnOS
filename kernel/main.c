@@ -22,7 +22,7 @@ main()
         kvminithart();   // turn on paging
         slab_init();
         procinit();      // process table
-        sem_init();      // 信号量
+        //sem_init();      // 信号量
         shminit();       // 共享内存
         trapinit();      // trap vectors
         trapinithart();  // install kernel trap vector

@@ -219,10 +219,6 @@ struct timeVal  _gettimeofday(void);
 // trace.c
 void            _trace(uint64 mask);
 
-// semaphore.c
-struct semaphore;
-void            sem_init();
-
 // kmalloc.c
 void*           kmalloc(uint64);
 void            kmfree(void*, uint64);

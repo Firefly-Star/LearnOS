@@ -16,7 +16,7 @@ void shm_reinit(struct shmblock* b)
     b->key = 0;
     b->ptr = NULL;
     b->sz = 0;
-    b->state = SHM_UNUSED;
+    b->state = IPC_UNUSED;
 }
 
 void shminit()
@@ -29,72 +29,34 @@ void shminit()
         shmid_pool[i].ptr = NULL;
         shmid_pool[i].ref_count = 0;
         shmid_pool[i].sz = 0;
-        shmid_pool[i].state = SHM_UNUSED;
+        shmid_pool[i].state = IPC_UNUSED;
     }
 }
 
-ipc_id hash(key_t key)
-{
-    return key % SHMMAX;
-}
+HASH_FUNC(SHMMAX)
 
 // 如果找到了key,那么返回key所在的id,如果没找到key,返回第一个空闲的id,如果满了,返回-1
 // 0为保留key，不能有shm的键值为0
-ipc_id shm_at(key_t key)
-{
-    ipc_id id = hash(key);
-    ipc_id origin_id = id;
-    ipc_id first_free = -1;
-    int find_free = 0;
-    for (;;)
-    {
-        acquire(&shmid_pool[id].lk);
-        if (shmid_pool[id].key == key)
-        {
-            release(&shmid_pool[id].lk);
-            break;
-        }
-        if (!find_free && shmid_pool[id].state == SHM_UNUSED)
-        {
-            find_free = 1;
-            first_free = id;
-        }
-        release(&shmid_pool[id].lk);
-        id = (id + 1) % SHMMAX;
-        if (id == origin_id)
-            break;
-    }
-    acquire(&shmid_pool[id].lk);
-    if (shmid_pool[id].key != key)
-    { // 没找到
-        release(&shmid_pool[id].lk);
-        return first_free;
-    }
-    else
-    { // 找到了
-        release(&shmid_pool[id].lk);
-        return id; 
-    }
-}
+AT_FUNC(shm, SHMMAX)
 
 ipc_id shmget(key_t key, uint64 size, uint flag)
 {
     ipc_id id = shm_at(key);
     if (flag & IPC_CREATE)
     {
-        if ((flag & IPC_EXCL) && (shmid_pool[id].state != SHM_UNUSED))
+        if ((flag & IPC_EXCL) && (shmid_pool[id].state != IPC_UNUSED))
         {
             return -2; // 已有
         }
         acquire(&shmid_pool[id].lk);
-        if (shmid_pool[id].state == SHM_UNUSED)
+        if (shmid_pool[id].state == IPC_UNUSED)
         { // 创建一块新的共享内存，此时它的引用计数仍然为0
             void* pa = kmalloc(size);
             shmid_pool[id].flag = flag & (IPC_OWNER_MASK | IPC_OTHER_MASK | IPC_GROUP_MASK);
             shmid_pool[id].key = key;
             shmid_pool[id].ptr = pa;
             shmid_pool[id].sz = size;
-            shmid_pool[id].state = SHM_USED;
+            shmid_pool[id].state = IPC_USED;
             release(&shmid_pool[id].lk);
             return id;
         }
@@ -107,7 +69,7 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
     else
     {
         acquire(&shmid_pool[id].lk);
-        if (shmid_pool[id].state == SHM_UNUSED)
+        if (shmid_pool[id].state == IPC_UNUSED)
         { // 不存在该键值的共享内存
             release(&shmid_pool[id].lk);
             return -1;
@@ -126,7 +88,7 @@ ipc_id shmget(key_t key, uint64 size, uint flag)
 void* shmat(int shmid, const void* shmaddr, int shmflag)
 {
     struct proc* p = myproc();
-    if (shmid >= SHMMAX || shmid_pool[shmid].state == SHM_UNUSED)
+    if (shmid >= SHMMAX || shmid_pool[shmid].state == IPC_UNUSED)
     {
         p->errno = 1; // 无效的shmid
         return NULL; 
@@ -172,7 +134,7 @@ void shmdt(struct proc* p, const void* shmaddr)
 
     acquire(&shm->lk);
     shm->ref_count -= 1;
-    if (shm->state == SHM_ZOMBIE && shm->ref_count == 0)
+    if (shm->state == IPC_ZOMBIE && shm->ref_count == 0)
     {
         printf("shm destructed.\n");
         shm_reinit(shm);
@@ -192,7 +154,7 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
         return -1; // 无效的shmid
     }
     acquire(&shmid_pool[shmid].lk);
-    if (shmid_pool[shmid].state == SHM_UNUSED)
+    if (shmid_pool[shmid].state == IPC_UNUSED)
     {
         release(&shmid_pool[shmid].lk);
         return -1; // 无效的shmid
@@ -204,7 +166,7 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
             break;
         }
         case IPC_RMID: {
-            shmid_pool[shmid].state = SHM_ZOMBIE;
+            shmid_pool[shmid].state = IPC_ZOMBIE;
             if (shmid_pool[shmid].ref_count == 0)
             {
                 printf("shm destructed.\n");
