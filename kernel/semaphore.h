@@ -67,9 +67,6 @@ union semun // semctl的参数
     int16*          array;
 };
 
-struct sem_t
-{
 
-};
 
 #endif

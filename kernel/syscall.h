@@ -24,9 +24,7 @@
 #define SYS_gettimeofday    23
 #define SYS_trace           24
 #define SYS_find            25
-#define SYS_sleep_for_signal 26
-#define SYS_wake_up_signal  27
-#define SYS_sem_init        28
+// 26-28号系统调用空闲，有新的系统调用可以塞到这三个空里
 #define SYS_shmget          29
 #define SYS_shmat           30
 #define SYS_shmdt           31

@@ -106,9 +106,6 @@ extern uint64 sys_getyear(void);
 extern uint64 sys_gettimeofday(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_find(void);
-extern uint64 sys_sleep_for_signal(void);
-extern uint64 sys_wake_up_signal(void);
-extern uint64 sys_sem_init(void);
 extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
@@ -146,9 +143,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_gettimeofday]      sys_gettimeofday,
 [SYS_trace]             sys_trace,
 [SYS_find]              sys_find,
-[SYS_sleep_for_signal]  sys_sleep_for_signal,
-[SYS_wake_up_signal]    sys_wake_up_signal,
-[SYS_sem_init]          sys_sem_init,
 [SYS_shmget]            sys_shmget,
 [SYS_shmat]             sys_shmat,
 [SYS_shmctl]            sys_shmctl,
@@ -185,9 +179,6 @@ static const char* syscallNames[] =
 [SYS_getyear]               "sys_getyear",
 [SYS_gettimeofday]          "sys_gettimeofday",
 [SYS_trace]                 "sys_trace",
-[SYS_sleep_for_signal]      "sys_sleep_for_signal",
-[SYS_wake_up_signal]        "sys_wake_up_signal",
-[SYS_sem_init]              "sys_sem_init",
 [SYS_shmget]                "sys_shmget",
 [SYS_shmat]                 "sys_shmat",
 [SYS_shmdt]                 "sys_shmdt",

@@ -30,7 +30,6 @@ int getyear(void);
 int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
 int trace(uint64); // mask of syscall to trace.
-void sem_init(struct sem_t* sem, char* name, uint value); // 私有信号量的初始化
 int shmget(key_t key, uint64 size, int shmflg);
 void* shmat(ipc_id shmid, const void* shmaddr, int shmflag);
 void shmdt(void* shmaddr);
@@ -61,6 +60,3 @@ void free(void*);
 
 // find.c
 void find(char*, char*); 
-
-// usem.c
-void sem_wait(struct sem_t*);
