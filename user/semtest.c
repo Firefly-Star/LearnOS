@@ -20,6 +20,7 @@ int main()
         semop(semid, &op, 1);
         int x;
         wait(&x);
+        semctl(semid, 0, IPC_RMID, arg);
     }
     else
     {

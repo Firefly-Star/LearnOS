@@ -67,6 +67,11 @@ union semun // semctl的参数
     int16*          array;
 };
 
-
+struct proc_semblock
+{
+    uint flag;
+    struct semblock* sem;
+    struct proc_semblock* next;
+};
 
 #endif

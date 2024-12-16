@@ -1,6 +1,7 @@
 #include "semaphore.h"
 #include "defs.h"
 #include "slab.h"
+#include "proc.h"
 
 struct semblock semid_pool[SEMMAX];
 
@@ -74,9 +75,51 @@ void seminit()
     }
 }
 
+// 需要持有b->lk
+void proc_addsem(struct proc* p, struct semblock* b, uint flag)
+{
+    struct proc_semblock* newnode = (struct proc_semblock*)kmalloc(sizeof(struct proc_semblock));
+    newnode->flag = flag;
+    newnode->next = p->proc_semhead->next;
+    newnode->sem = b;
+    p->proc_semhead->next = newnode;
+}
+
+// 需要持有b->lk
+int proc_remsem(struct proc* p, struct semblock* b)
+{
+    struct proc_semblock* prev = p->proc_semhead;
+    while(prev->next != NULL && prev->next->sem != b)
+    {
+        prev = prev->next;
+    }
+    if (prev->next == NULL)
+    {
+        return -1;
+    }
+    struct proc_semblock* toremove = prev->next;
+    ASSERT(toremove->sem == b, "proc_remsem");
+    prev->next = toremove->next;
+    toremove->sem->ref_count -= 1;
+    if (toremove->sem->state == IPC_ZOMBIE && toremove->sem->ref_count == 0)
+    {
+        sem_reinit(b);
+    }
+    kmfree(toremove, sizeof(struct proc_semblock));
+    return 0;
+}
+
+void init_procsemblock(struct proc_semblock* b)
+{
+    b->flag = 0;
+    b->next = NULL;
+    b->sem = NULL;
+}
+
 ipc_id semget(key_t key, uint64 size, uint flag)
 {
     ipc_id id = sem_at(key);
+    struct proc* p = myproc();
     if (flag & IPC_CREATE)
     {
         acquire(&semid_pool[id].lk);
@@ -95,11 +138,15 @@ ipc_id semget(key_t key, uint64 size, uint flag)
             semid_pool[id].ptr = sem;
             semid_pool[id].sz = size;
             semid_pool[id].state = IPC_USED;
+            proc_addsem(p, semid_pool + id, semid_pool[id].flag);
+            semid_pool[id].ref_count += 1;
             release(&semid_pool[id].lk);
             return id;
         }
         else
         { // 返回已有的sem块号
+            proc_addsem(p, semid_pool + id, semid_pool[id].flag);
+            semid_pool[id].ref_count += 1;
             release(&semid_pool[id].lk);
             return id;
         }
@@ -114,6 +161,8 @@ ipc_id semget(key_t key, uint64 size, uint flag)
         }
         else
         { // 返回已有的sem块号
+            proc_addsem(p, semid_pool + id, semid_pool[id].flag);
+            semid_pool[id].ref_count += 1;
             release(&semid_pool[id].lk);
             return id;
         }
@@ -211,6 +260,7 @@ int semctl(int semid, int semnum, int cmd, uint64 arg) // 我可以信任你吗?
         case IPC_RMID:
         {
             semid_pool[semid].state = IPC_ZOMBIE;
+            proc_remsem(p, semid_pool + semid);
             // TODO: 当引用计数为0时销毁
             break;
         }

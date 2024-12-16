@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "uvapg.h"
+#include "semaphore.h"
 
 struct cpu cpus[NCPU];
 
@@ -61,6 +62,8 @@ procinit(void)
       init_freeva(p->freeva_head);
       p->proc_shmhead = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
       init_procshmblock(p->proc_shmhead);
+      p->proc_semhead = (struct proc_semblock*)(kmalloc(sizeof(struct proc_semblock)));
+      init_procsemblock(p->proc_semhead);
       p->vforked = 0;
   }
 }
@@ -204,6 +207,24 @@ proc_freeshm(struct proc* p)
     }
 }
 
+void
+proc_freesem(struct proc* p)
+{
+    while(p->proc_semhead->next != NULL)
+    {
+        struct proc_semblock* toremove = p->proc_semhead->next;
+        p->proc_semhead->next = toremove->next;
+        acquire(&toremove->sem->lk);
+        toremove->sem->ref_count -= 1;
+        if (toremove->sem->state == IPC_ZOMBIE && toremove->sem->ref_count == 0)
+        {
+            sem_reinit(toremove->sem);
+        }
+        release(&toremove->sem->lk);
+        kmfree(toremove, sizeof(struct proc_semblock));
+    }
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -219,6 +240,7 @@ freeproc(struct proc *p)
     {
         proc_freeshm(p);
     }
+    proc_freesem(p);
     proc_freepagetable(p->pagetable, p->sz);
   }
   p->pagetable = 0;

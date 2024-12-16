@@ -4,6 +4,13 @@
 #include "types.h"
 #include "ipc_hash.h"
 
+#define ASSERT(x, info)\
+do\
+{\
+    if (!(x))\
+        panic(info);\
+} while(0);
+
 struct buf;
 struct context;
 struct file;
@@ -248,8 +255,12 @@ struct proc_shmblock* findprev_procshmblock(struct proc_shmblock* head, ipc_id s
 // semaphore.c
 struct          sembuf;
 union           semun;
+struct          proc_semblock;
+struct          semblock;
 void            seminit();
+void            sem_reinit(struct semblock* b);
 ipc_id          semget(key_t key, uint64 size, uint flag);
+void            init_procsemblock(struct proc_semblock* b);
 int             semop(int semid, struct sembuf* sops, uint nsops);
 int             semctl(int semid, int semnum, int cmd, uint64 un);
 
