@@ -53,7 +53,7 @@ void* pnum_to_pa(uint64 pnum)
 {
     if (pnum >= pnum_max)
     {
-        printf("pnum: %lu, ", pnum);
+        printf("pnum: %lx, ", pnum);
         panic("pnum_to_pa");
     }
     return (void*)(buddy.start + pnum * PGSIZE);

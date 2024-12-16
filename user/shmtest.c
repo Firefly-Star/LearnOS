@@ -7,6 +7,9 @@ int main()
     int x2 = shmget(1, 1000, 0);
     int x3 = shmget(4097, 200, IPC_CREATE | IPC_EXCL);
     void* ptr = shmat(x2, 0, 0);
+    int* x = (int*)(malloc(sizeof(int)));
+    *x = -100;
+    printf("before vfork: %d.\n", *x);
     if (vfork())
     {
         printf("%d, %d, %d\n", x1, x2, x3);
@@ -14,6 +17,7 @@ int main()
         printf("%lx\n", (uint64)ptr);
         printf("parent proc shm content: %lu.\n", *((uint64*)(ptr)));
         shmctl(x2, IPC_RMID, 0);
+        printf("parent vfork: %d.\n", *x);
     }
     else
     {
@@ -26,6 +30,8 @@ int main()
         shmctl(x2, IPC_STAT, &bf);
         printf("x2 state: %d, %d, %d, %d.\n", bf.flag, bf.ref_count, bf.state, bf.sz);
         shmctl(x3, IPC_RMID, 0);
+        *x = 100;
+        printf("child vfork: %d.\n", *x);
     }
     int cstate;
     x3 = x1;

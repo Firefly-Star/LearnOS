@@ -148,7 +148,6 @@ void shmdt(struct proc* p, const void* shmaddr)
     }
     release(&shm->lk);
 
-
     struct proc_shmblock* newnext = prev->next->next;
     kmfree(prev->next, sizeof(struct proc_shmblock));
     prev->next = newnext;
