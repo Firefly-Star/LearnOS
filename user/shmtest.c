@@ -9,6 +9,7 @@ int main()
     void* ptr = shmat(x2, 0, 0);
     int* x = (int*)(malloc(sizeof(int)));
     *x = -100;
+    int y = -100;
     printf("before vfork: %d.\n", *x);
     if (vfork())
     {
@@ -18,6 +19,7 @@ int main()
         printf("parent proc shm content: %lu.\n", *((uint64*)(ptr)));
         shmctl(x2, IPC_RMID, 0);
         printf("parent vfork: %d.\n", *x);
+        printf("parent vfork: %d.\n", y);
     }
     else
     {
@@ -32,6 +34,7 @@ int main()
         shmctl(x3, IPC_RMID, 0);
         *x = 100;
         printf("child vfork: %d.\n", *x);
+        y = 100;
     }
     int cstate;
     x3 = x1;

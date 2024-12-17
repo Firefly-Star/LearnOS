@@ -264,4 +264,7 @@ void            init_procsemblock(struct proc_semblock* b);
 int             semop(int semid, struct sembuf* sops, uint nsops);
 int             semctl(int semid, int semnum, int cmd, uint64 un);
 
+// msg.c
+struct          proc_msgblock;
+
 #endif

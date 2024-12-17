@@ -120,6 +120,7 @@ struct proc {
   struct freeva* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
   struct proc_shmblock* proc_shmhead;   // 进程所拥有的共享内存链表首指针
   struct proc_semblock* proc_semhead;   // 进程引用的sem链表首指针
+  struct proc_msgblock* proc_msghead;   // 消息队列引用的msq链表首指针
   int priority;                         // 进程优先级
   uint64 errno;
   int vforked;
