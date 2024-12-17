@@ -24,7 +24,10 @@
 #define SYS_gettimeofday    23
 #define SYS_trace           24
 #define SYS_find            25
-// 26-28号系统调用空闲，有新的系统调用可以塞到这三个空里
+// 26-28号进程调度占用
+#define SYS_set_priority     26
+// #define SYS_                27
+// #define SYS_                28 
 #define SYS_shmget          29
 #define SYS_shmat           30
 #define SYS_shmdt           31

@@ -11,6 +11,7 @@
 #include "slab.h"
 #include "shm.h"
 #include "IPC.h"
+#include "proc.h"
 
 uint64
 sys_exit(void)
@@ -152,6 +153,16 @@ sys_find(void)
     argaddr(0, &mask);
     _trace(mask);
     return 0;
+}
+
+uint64
+sys_set_priority(void)
+{
+  uint64 pid, pr;
+  
+  argaddr(0, &pid);
+  argaddr(1, &pr);
+  return set_priority(pid, pr);
 }
 
 uint64
