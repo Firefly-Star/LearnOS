@@ -154,7 +154,8 @@ UPROGS=\
 	$U/_heaptest\
 	$U/_spinlocktest\
 	$U/_shmtest\
-	$U/_semtest
+	$U/_semtest\
+	$U/_prio_sche_test
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

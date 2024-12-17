@@ -40,6 +40,7 @@ entry("uptime");
 entry("getyear");
 entry("gettimeofday");
 entry("trace");
+entry("set_priority");
 entry("shmget");
 entry("shmat");
 entry("shmdt");
