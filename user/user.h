@@ -39,7 +39,7 @@ int vfork(void);
 int semget(key_t key, uint64 size, uint flag);
 int semop(int semid, struct sembuf* sops, uint nsops);
 int semctl(int semid, int semnum, int cmd, union semun un);
-int msgget(key_t key, uint flag);
+int msgget(key_t key, uint32 maxlen, uint32 flag);
 
 // ulib.c
 int stat(const char*, struct stat*);

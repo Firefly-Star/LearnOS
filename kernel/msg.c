@@ -7,6 +7,11 @@ struct msg_queue msqid_pool[MSGMAX];
 HASH_FUNC(MSGMAX)
 AT_FUNC(msq, MSGMAX)
 
+// 发送阻塞队列的位置
+#define SND_CHAN(msq) (&(msq))
+// 接收阻塞队列的位置
+#define RCV_CHAN(msq) ((char*)(&(msq)) + 1)
+
 void msq_init()
 {
     for (int i = 0;i < MSGMAX; ++i)
@@ -155,7 +160,7 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
         { // 阻塞，进程睡觉
             do
             {
-                sleep(msqid_pool + msqid, &msqid_pool[msqid].lk);
+                sleep(SND_CHAN(msqid_pool[msqid]), &msqid_pool[msqid].lk);
             }while((msqid_pool[msqid].tlen + newmsg->content.length) > msqid_pool[msqid].maxlen);
         }
     }
@@ -176,11 +181,12 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
         newmsg->next = NULL;
     }
     release(&msqid_pool[msqid].lk);
+    wakeup(RCV_CHAN(msqid_pool[msqid]));
     return 0;
 }
 
 // msgflag: 0(阻塞接收), IPC_NOWAIT(非阻塞接收)
-int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflag)
+int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg)
 {
     if (msqid >= MSGMAX)
     {
@@ -193,9 +199,64 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
         release(&msqid_pool[msqid].lk);
         return -2; // 无效的msqid;
     }
-    release(&msqid_pool[msqid].lk);
+    struct msg_msg* prev = NULL;
+    if (msqid_pool[msqid].first == NULL)
+    { // 队列为空
+        if(msgflg & IPC_NOWAIT)
+        {
+            return -1; // 无响应type的消息
+        }
+        else
+        { // 等到非空为止
+            do
+            {
+                sleep(RCV_CHAN(msqid_pool[msqid]), &msqid_pool[msqid].lk);
+            } while (msqid_pool[msqid].first == NULL);
+        }
+    }
 
-    // WIP
+    // 此时队列非空
+    for (;;)
+    { // 为了找到所需要类型的消息的前驱节点
+        int found = 0;
+        
+        prev = msqid_pool[msqid].first;
+        if (msgtype == 0 || prev->content.mtype == msgtype)
+        { // 第一个就是需要的消息，跳出循环
+            prev = NULL;
+            break;
+        }
+        while(prev->next != NULL)
+        {
+            if(msgtype == 0 || prev->next->content.mtype == msgtype)
+            {
+                found = 1;
+                break;
+            }
+        }
+        if (!found)
+        { // 没找到
+            if(msgflg & IPC_NOWAIT)
+            {
+                return -1; // 无相应type的消息
+            }
+            else
+            { // 睡眠，醒过来后进行下一轮检查
+                sleep(RCV_CHAN(msqid_pool[msqid]), &msqid_pool[msqid].lk);
+            }
+        }
+        else
+        { // 找到了，跳出循环
+            break;
+        }
+    }
+
+    if(prev == NULL)
+    { // 队列的第一个消息是想要的
+        
+    }
+
+    release(&msqid_pool[msqid].lk);
 
     return 0;
 }

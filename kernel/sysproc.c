@@ -268,8 +268,10 @@ uint64
 sys_msgget(void)
 {
     uint64 key;
+    uint64 maxlen;
     uint64 flag;
     argaddr(0, &key);
-    argaddr(1, &flag);
-    return msgget(key, (uint)(flag));
+    argaddr(1, &maxlen);
+    argaddr(2, &flag);
+    return msgget(key, (uint32)maxlen, (uint32)(flag));
 }
