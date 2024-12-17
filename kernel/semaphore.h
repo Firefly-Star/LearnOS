@@ -1,8 +1,7 @@
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
+#ifndef _SEMAPHORE_H
+#define _SEMAPHORE_H
 
 #include "spinlock.h"
-#include "proc.h"
 #include "ipc_hash.h"
 #include "IPC.h"
 #include "types.h"
@@ -15,6 +14,8 @@
 #define SETALL 68
 
 typedef int ipc_id;
+
+struct proc;
 
 struct wait_queue_node
 {

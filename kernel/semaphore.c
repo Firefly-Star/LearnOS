@@ -80,15 +80,15 @@ void proc_addsem(struct proc* p, struct semblock* b, uint flag)
 {
     struct proc_semblock* newnode = (struct proc_semblock*)kmalloc(sizeof(struct proc_semblock));
     newnode->flag = flag;
-    newnode->next = p->proc_semhead->next;
+    newnode->next = p->proc_semhead.next;
     newnode->sem = b;
-    p->proc_semhead->next = newnode;
+    p->proc_semhead.next = newnode;
 }
 
 // 需要持有b->lk
 int proc_remsem(struct proc* p, struct semblock* b)
 {
-    struct proc_semblock* prev = p->proc_semhead;
+    struct proc_semblock* prev = &(p->proc_semhead);
     while(prev->next != NULL && prev->next->sem != b)
     {
         prev = prev->next;

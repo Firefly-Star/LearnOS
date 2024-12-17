@@ -49,3 +49,4 @@ entry("vfork");
 entry("semget");
 entry("semop");
 entry("semctl");
+entry("msgget");

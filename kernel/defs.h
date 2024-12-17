@@ -267,5 +267,8 @@ int             semctl(int semid, int semnum, int cmd, uint64 un);
 
 // msg.c
 struct          proc_msgblock;
+void            msq_init();
+ipc_id          msgget(key_t key, uint flag);
+void            init_procmsgblock(struct proc_msgblock* b);
 
 #endif

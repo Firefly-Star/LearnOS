@@ -115,6 +115,7 @@ extern uint64 sys_semget(void);
 extern uint64 sys_semop(void);
 extern uint64 sys_semctl(void);
 extern uint64 sys_set_priority(void);
+extern uint64 sys_msgget(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -144,7 +145,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_gettimeofday]      sys_gettimeofday,
 [SYS_trace]             sys_trace,
 [SYS_find]              sys_find,
-[SYS_set_priority]       sys_set_priority,
+[SYS_set_priority]      sys_set_priority,
 // 
 // 
 [SYS_shmget]            sys_shmget,
@@ -154,7 +155,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_vfork]             sys_vfork,
 [SYS_semget]            sys_semget,
 [SYS_semop]             sys_semop,
-[SYS_semctl]            sys_semctl
+[SYS_semctl]            sys_semctl,
+[SYS_msgget]            sys_msgget
 };
 
 static const char* syscallNames[] = 

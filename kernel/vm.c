@@ -396,7 +396,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 // 只会在fork系列函数中被调用
 void uvmcopy_shm(struct proc* old, struct proc* new)
 {
-    struct proc_shmblock* workptr = old->proc_shmhead->next;
+    struct proc_shmblock* workptr = old->proc_shmhead.next;
     while(workptr != NULL)
     {
         void* va = workptr->va;
@@ -414,7 +414,7 @@ void uvmcopy_shm(struct proc* old, struct proc* new)
         newblock->next = workptr->next;
         newblock->shm = workptr->shm;
         newblock->va = workptr->va;
-        insert_procshmblock(new->proc_shmhead, newblock);
+        insert_procshmblock(&new->proc_shmhead, newblock);
         workptr = workptr->next;
     }
 }

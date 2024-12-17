@@ -126,7 +126,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
         newblock->flag = flag;
         newblock->shm = shmid_pool + shmid;
         newblock->va = freeva;
-        insert_procshmblock(p->proc_shmhead, newblock);
+        insert_procshmblock(&p->proc_shmhead, newblock);
         shmid_pool[shmid].ref_count += 1; // 增加引用计数
     }
 
@@ -135,7 +135,7 @@ void* shmat(int shmid, const void* shmaddr, int shmflag)
 
 void shmdt(struct proc* p, const void* shmaddr)
 {
-    struct proc_shmblock* prev = findprev_procshmblock(p->proc_shmhead, NULL, shmaddr);
+    struct proc_shmblock* prev = findprev_procshmblock(&p->proc_shmhead, NULL, shmaddr);
     struct shmblock* shm = prev->next->shm;
     uvmunmap(p->pagetable, (uint64)(shmaddr), (shm->sz + PGSIZE - 1) / PGSIZE, 0);
 

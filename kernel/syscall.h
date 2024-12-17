@@ -36,3 +36,4 @@
 #define SYS_semget          34
 #define SYS_semop           35
 #define SYS_semctl          36
+#define SYS_msgget          37

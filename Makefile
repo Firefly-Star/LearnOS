@@ -156,8 +156,9 @@ UPROGS=\
 	$U/_spinlocktest\
 	$U/_shmtest\
 	$U/_semtest\
-	$U/_vforktest \
-	$U/_prio_sche_test
+	$U/_vforktest\
+	$U/_prio_sche_test\
+	$U/_msgtest
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

@@ -60,10 +60,9 @@ procinit(void)
       p->traceMask = 0;
       p->freeva_head = (struct freeva*)(kmalloc(sizeof(struct freeva)));
       init_freeva(p->freeva_head);
-      p->proc_shmhead = (struct proc_shmblock*)(kmalloc(sizeof(struct proc_shmblock)));
-      init_procshmblock(p->proc_shmhead);
-      p->proc_semhead = (struct proc_semblock*)(kmalloc(sizeof(struct proc_semblock)));
-      init_procsemblock(p->proc_semhead);
+      init_procshmblock(&p->proc_shmhead);
+      init_procsemblock(&p->proc_semhead);
+      init_procmsgblock(&p->proc_msghead);
       p->vforked = 0;
   }
 }
@@ -201,19 +200,19 @@ found:
 void
 proc_freeshm(struct proc* p)
 {
-    while(p->proc_shmhead->next != NULL)
+    while(p->proc_shmhead.next != NULL)
     {
-        shmdt(p, p->proc_shmhead->next->va);        
+        shmdt(p, p->proc_shmhead.next->va);        
     }
 }
 
 void
 proc_freesem(struct proc* p)
 {
-    while(p->proc_semhead->next != NULL)
+    while(p->proc_semhead.next != NULL)
     {
-        struct proc_semblock* toremove = p->proc_semhead->next;
-        p->proc_semhead->next = toremove->next;
+        struct proc_semblock* toremove = p->proc_semhead.next;
+        p->proc_semhead.next = toremove->next;
         acquire(&toremove->sem->lk);
         toremove->sem->ref_count -= 1;
         if (toremove->sem->state == IPC_ZOMBIE && toremove->sem->ref_count == 0)
@@ -448,7 +447,7 @@ int vfork()
     mappages(np->pagetable, TRAPFRAME, PGSIZE, (uint64)(np->trapframe), PTE_R | PTE_W);
 
     // 接管父进程的shm块
-    np->proc_shmhead->next = p->proc_shmhead->next;
+    np->proc_shmhead.next = p->proc_shmhead.next;
 
     // 接管父进程的shm地址管理块
     np->freeva_head->next = p->freeva_head->next;
@@ -536,10 +535,10 @@ exit(int status)
   if(p->vforked)
   {
     // 归还shm管理块和虚拟地址管理块
-    p->parent->proc_shmhead->next = p->proc_shmhead->next;
+    p->parent->proc_shmhead.next = p->proc_shmhead.next;
     p->parent->freeva_head->next = p->freeva_head->next;
     p->freeva_head->next = NULL;
-    p->proc_shmhead->next = NULL;
+    p->proc_shmhead.next = NULL;
     // 归还trapframe
     uvmunmap(p->pagetable, TRAPFRAME, 1, 0);
     mappages(p->pagetable, TRAPFRAME, PGSIZE, (uint64)(p->parent->trapframe), PTE_W | PTE_R);

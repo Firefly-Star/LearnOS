@@ -50,9 +50,16 @@ void proc_addmsq(struct proc* p, struct msg_queue* msq, uint flag)
 {
     struct proc_msgblock* newnode = (struct proc_msgblock*)(kmalloc(sizeof(struct proc_msgblock)));
     newnode->flag = flag;
-    newnode->next = p->proc_msghead->next;
+    newnode->next = p->proc_msghead.next;
     newnode->msq = msq;
-    p->proc_msghead->next = newnode;
+    p->proc_msghead.next = newnode;
+}
+
+void init_procmsgblock(struct proc_msgblock* b)
+{
+    b->flag = 0;
+    b->next = NULL;
+    b->msq = NULL;
 }
 
 ipc_id msgget(key_t key, uint flag)

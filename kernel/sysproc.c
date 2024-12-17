@@ -263,3 +263,13 @@ sys_semctl(void)
     argaddr(3, &un);
     return semctl((int)(semid), (int)(semnum), (int)(cmd), un);
 }
+
+uint64
+sys_msgget(void)
+{
+    uint64 key;
+    uint64 flag;
+    argaddr(0, &key);
+    argaddr(1, &flag);
+    return msgget(key, (uint)(flag));
+}

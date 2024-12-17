@@ -4,6 +4,8 @@
 #include "param.h"
 #include "spinlock.h"
 #include "uvapg.h"
+#include "msg.h"
+#include "semaphore.h"
 
 // Saved registers for kernel context switches.
 struct context {
@@ -118,9 +120,9 @@ struct proc {
   uint64 traceMask;            // 追踪的系统调用号
   int slot;                    // 调度所需的时间片
   struct freeva* freeva_head;      // 共享内存段的可用虚拟地址内存块链的首指针
-  struct proc_shmblock* proc_shmhead;   // 进程所拥有的共享内存链表首指针
-  struct proc_semblock* proc_semhead;   // 进程引用的sem链表首指针
-  struct proc_msgblock* proc_msghead;   // 消息队列引用的msq链表首指针
+  struct proc_shmblock proc_shmhead;    // 进程所拥有的共享内存链表首指针
+  struct proc_semblock proc_semhead;    // 进程引用的sem链表首指针
+  struct proc_msgblock proc_msghead;    // 消息队列引用的msq链表首指针
   int priority;                         // 进程优先级
   uint64 errno;
   int vforked;
