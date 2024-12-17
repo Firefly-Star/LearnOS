@@ -9,6 +9,7 @@
 // 属性
 #define IPC_EXCL        1U << 14
 #define IPC_CREATE      1U << 15
+#define IPC_NOWAIT      1U << 16
 
 // 权限控制
 #define IPC_OWNER_MASK  15U << 8

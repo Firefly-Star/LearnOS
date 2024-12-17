@@ -171,7 +171,7 @@ ipc_id semget(key_t key, uint64 size, uint flag)
 
 int semop(int semid, struct sembuf* sops, uint nsops)
 {
-    if (semid > SEMMAX)
+    if (semid >= SEMMAX)
     {
         return -1; // 越界
     }
@@ -241,7 +241,7 @@ int semop(int semid, struct sembuf* sops, uint nsops)
 // 依旧没有做权限管理。主要是没有区分用户
 int semctl(int semid, int semnum, int cmd, uint64 arg) // 我可以信任你吗? union?
 {
-    if (semid > SEMMAX)
+    if (semid >= SEMMAX)
     {
         return -1; // 越界
     }

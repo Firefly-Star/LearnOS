@@ -8,7 +8,7 @@
 #include "ipc_hash.h"
 
 #define MSGMAX      16      
-#define MSGSIZE_MAX PGSIZE
+#define MSQSIZE_MAX 2 * PGSIZE
 
 struct msgbuf
 {
@@ -31,14 +31,16 @@ struct msg_queue
     struct msg_msg* last;
     uint            flag;
     key_t           key;
-    int             msg_count;
+    int             tlen;
+    uint32          maxlen;
     int             ref_count;
     enum ipcstate   state;
 };
 
 struct msqid_ds
 {
-    int             msg_count;
+    int             tlen;
+    uint32          maxlen;
     int             ref_count;
     enum ipcstate   state;
     uint            flag;

@@ -17,7 +17,8 @@ void msq_init()
         msqid_pool[i].last = NULL;
         msqid_pool[i].flag = 0;
         msqid_pool[i].key = 0;
-        msqid_pool[i].msg_count = 0;
+        msqid_pool[i].tlen = 0;
+        msqid_pool[i].maxlen = MSQSIZE_MAX;
         msqid_pool[i].ref_count = 0;
         msqid_pool[i].state = IPC_UNUSED;
     }
@@ -41,7 +42,8 @@ void msq_reinit(struct msg_queue* msq)
     msq->last = NULL;
     msq->flag = 0;
     msq->key = 0;
-    msq->msg_count = 0;
+    msq->tlen = 0;
+    msq->maxlen = MSQSIZE_MAX;
     msq->state = IPC_UNUSED;
 }
 
@@ -62,7 +64,8 @@ void init_procmsgblock(struct proc_msgblock* b)
     b->msq = NULL;
 }
 
-ipc_id msgget(key_t key, uint flag)
+// maxlen = 0表示采用系统默认的最长长度
+ipc_id msgget(key_t key, uint32 maxlen, uint flag)
 {
     ipc_id id = msq_at(key);
     struct proc* p = myproc();
@@ -78,6 +81,10 @@ ipc_id msgget(key_t key, uint flag)
         { 
             msqid_pool[id].flag = flag & (IPC_OWNER_MASK | IPC_OTHER_MASK | IPC_GROUP_MASK);
             msqid_pool[id].key = key;
+            if (maxlen > 0)
+            {
+                msqid_pool[id].maxlen = maxlen;
+            }
             msqid_pool[id].state = IPC_USED;
             proc_addmsq(p, msqid_pool + id, msqid_pool[id].flag);
             msqid_pool[id].ref_count += 1;
@@ -108,4 +115,87 @@ ipc_id msgget(key_t key, uint flag)
             return id;
         }
     }
+}
+
+// msgflag: 0(阻塞发送), IPC_NOWAIT(非阻塞发送)
+int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
+{
+    if (msqid >= MSGMAX)
+    {
+        return -1; // 越界
+    }
+
+    acquire(&msqid_pool[msqid].lk);
+    if (msqid_pool[msqid].state == IPC_UNUSED)
+    {
+        release(&msqid_pool[msqid].lk);
+        return -2; // 无效的semid;
+    }
+    release(&msqid_pool[msqid].lk);
+
+    struct msg_msg* newmsg = (struct msg_msg*)(kmalloc(sizeof(struct msg_msg)));
+    struct proc* p = myproc();
+    copyin(p->pagetable, (char*)(&newmsg->content), (uint64)(msgp), sizeof(struct msgbuf));
+
+    if(newmsg->content.mtype <= 0)
+    {
+        return -3; // 无效的mtype
+    }
+
+    acquire(&msqid_pool[msqid].lk);
+    if ((msqid_pool[msqid].tlen + newmsg->content.length) > msqid_pool[msqid].maxlen)
+    { // 消息队列长度过长
+        if (msgflg & IPC_NOWAIT)
+        { // 非阻塞，直接返回-1
+            release(&msqid_pool[msqid].lk);
+            kmfree(newmsg, sizeof(struct msg_msg));
+            return -1;
+        }
+        else
+        { // 阻塞，进程睡觉
+            do
+            {
+                sleep(msqid_pool + msqid, &msqid_pool[msqid].lk);
+            }while((msqid_pool[msqid].tlen + newmsg->content.length) > msqid_pool[msqid].maxlen);
+        }
+    }
+    char* newtext = (char*)(kmalloc(newmsg->content.length));
+    copyin(p->pagetable, newtext, (uint64)(newmsg->content.mtext), newmsg->content.length);
+    newmsg->content.mtext = newtext;
+
+    if(msqid_pool[msqid].first == NULL)
+    {
+        msqid_pool[msqid].first = newmsg;
+        msqid_pool[msqid].last = newmsg;
+        newmsg->next = NULL;
+    }
+    else
+    {
+        msqid_pool[msqid].last->next = newmsg;
+        msqid_pool[msqid].last = newmsg;
+        newmsg->next = NULL;
+    }
+    release(&msqid_pool[msqid].lk);
+    return 0;
+}
+
+// msgflag: 0(阻塞接收), IPC_NOWAIT(非阻塞接收)
+int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflag)
+{
+    if (msqid >= MSGMAX)
+    {
+        return -1; // 越界
+    }
+
+    acquire(&msqid_pool[msqid].lk);
+    if (msqid_pool[msqid].state == IPC_UNUSED)
+    {
+        release(&msqid_pool[msqid].lk);
+        return -2; // 无效的msqid;
+    }
+    release(&msqid_pool[msqid].lk);
+
+    // WIP
+
+    return 0;
 }
