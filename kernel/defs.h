@@ -268,10 +268,12 @@ int             semctl(int semid, int semnum, int cmd, uint64 un);
 // msg.c
 struct          proc_msgblock;
 struct          msgbuf;
+struct          msqid_ds;
 void            msq_init();
 void            init_procmsgblock(struct proc_msgblock* b);
 ipc_id          msgget(key_t key, uint32 maxlen, uint flag);
 int             msgsnd(int msqid, const struct msgbuf *msgp, int msgflg);
 int             msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg);
+int             msgctl(ipc_id msqid, int cmd, struct msqid_ds* buf);
 
 #endif

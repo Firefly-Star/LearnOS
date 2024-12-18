@@ -122,7 +122,7 @@ ipc_id msgget(key_t key, uint32 maxlen, uint flag)
 }
 
 // msgflag: 0(阻塞发送), IPC_NOWAIT(非阻塞发送)
-int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
+int msgsnd(ipc_id msqid, const struct msgbuf *msgp, int msgflg)
 {
     if (msqid >= MSGMAX)
     {
@@ -182,7 +182,7 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
 }
 
 // msgflag: 0(阻塞接收), IPC_NOWAIT(非阻塞接收)
-int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg)
+int msgrcv(ipc_id msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg)
 {
     if (msqid >= MSGMAX)
     {
@@ -229,6 +229,10 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
             {
                 found = 1;
                 break;
+            }
+            else
+            {
+                prev = prev->next;
             }
         }
         if (!found)
@@ -279,8 +283,30 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
     msqid_pool[msqid].msg_count -= 1;
 
     release(&msqid_pool[msqid].lk);
+
+    if (msgsz > 0 && msgsz < wantednode->content.length)
+    {
+        memset(wantednode->content.mtext + msgsz, 0, wantednode->content.length - msgsz);
+    }
     copyout(p->pagetable, (uint64)(msgp), (char*)(&(wantednode->content)), MSGSIZE_MAX);    
     msg_msg_destruct(wantednode);
     wakeup(SND_CHAN(msqid_pool[msqid]));
+    return 0;
+}
+
+int msgctl(ipc_id msqid, int cmd, struct msqid_ds* buf)
+{
+    if (msqid >= MSGMAX)
+    {
+        return -1; // 越界
+    }
+
+    acquire(&msqid_pool[msqid].lk);
+    if (msqid_pool[msqid].state == IPC_UNUSED)
+    {
+        release(&msqid_pool[msqid].lk);
+        return -2; // 无效的msqid;
+    }
+
     return 0;
 }
