@@ -231,7 +231,8 @@ void* buddy_alloc(uint32 order)
     }
 
     if (free_order > MAX_ORDER)
-        panic("buddy_alloc: bad alloc.");
+        return NULL;
+        // panic("buddy_alloc: bad alloc.");
     
     // 将free_order给逐步拆分成order阶的内存块
     void* mem_block = buddy_erasefirst(free_order);
