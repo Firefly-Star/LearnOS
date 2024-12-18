@@ -53,3 +53,4 @@ entry("msgget");
 entry("msgsnd");
 entry("msgrcv");
 entry("msgctl");
+entry("ticks");

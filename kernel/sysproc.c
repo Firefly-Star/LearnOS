@@ -166,6 +166,12 @@ sys_set_priority(void)
 }
 
 uint64
+sys_ticks(void)
+{
+    return getticks();
+}
+
+uint64
 sys_shmget()
 {
     uint64 key;

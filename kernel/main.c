@@ -27,6 +27,7 @@ main()
         msqinit();       // 消息队列
         trapinit();      // trap vectors
         trapinithart();  // install kernel trap vector
+        printf("ticks: %d.\n", getticks());
         plicinit();      // set up interrupt controller
         plicinithart();  // ask PLIC for device interrupts
         binit();         // buffer cache

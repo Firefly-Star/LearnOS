@@ -158,7 +158,8 @@ UPROGS=\
 	$U/_semtest\
 	$U/_vforktest\
 	$U/_prio_sche_test\
-	$U/_msgtest
+	$U/_msgtest\
+	$U/_ticks
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

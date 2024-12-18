@@ -34,6 +34,7 @@ int gettimeofday(struct timeVal*);
 int sleep(int); // added by LC
 int trace(uint64); // mask of syscall to trace.
 int set_priority(int, int); // priority
+uint ticks();
 int shmget(key_t key, uint64 size, int shmflg);
 void* shmat(ipc_id shmid, const void* shmaddr, int shmflag);
 void shmdt(void* shmaddr);

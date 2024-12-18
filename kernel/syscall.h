@@ -25,8 +25,8 @@
 #define SYS_trace           24
 #define SYS_find            25
 // 26-28号进程调度占用
-#define SYS_set_priority     26
-// #define SYS_                27
+#define SYS_set_priority    26
+#define SYS_ticks           27
 // #define SYS_                28 
 #define SYS_shmget          29
 #define SYS_shmat           30

@@ -182,6 +182,7 @@ void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            usertrapret(void);
+uint            getticks(void);
 
 // uart.c
 void            uartinit(void);

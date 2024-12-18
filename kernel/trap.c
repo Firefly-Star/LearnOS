@@ -186,6 +186,16 @@ clockintr()
   w_stimecmp(r_time() + 1000000);
 }
 
+uint
+getticks()
+{
+    uint t;
+    acquire(&tickslock);
+    t = ticks;
+    release(&tickslock);
+    return t;
+}
+
 // check if it's an external interrupt or software interrupt,
 // and handle it.
 // returns 2 if timer interrupt,
