@@ -29,6 +29,11 @@ struct kmem_cache g_slab_kmem_cache;
 
 #define ALIGN_UP(sz, align) (((sz) + ((align) - 1)) & (~((align) - 1)))
 
+static inline void* pa_to_page(void* pa)
+{
+    return (void*)((uint64)pa & ~(PGSIZE - 1));
+}
+
 struct snode* init_small_object_pool(uint16 unitsz, uint16 init_pgnum)
 {
     // 隐式链接，把页的链接直接放在每个页面的首个对象的位置
@@ -192,10 +197,7 @@ void* alloc_large_object_pool(struct kmem_cache* cache)
     return fa;
 }
 
-inline void* pa_to_page(void* pa)
-{
-    return (void*)((uint64)pa & ~(PGSIZE - 1));
-}
+
 
 void free_small_object_pool(struct kmem_cache* cache, void* pa)
 {
