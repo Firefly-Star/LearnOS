@@ -116,6 +116,7 @@ extern uint64 sys_semop(void);
 extern uint64 sys_semctl(void);
 extern uint64 sys_set_priority(void);
 extern uint64 sys_ticks(void);
+extern uint64 sys_cycles(void);
 extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
@@ -150,8 +151,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace]             sys_trace,
 [SYS_find]              sys_find,
 [SYS_set_priority]      sys_set_priority,
-// 
-// 
+[SYS_ticks]             sys_ticks,
+[SYS_cycles]            sys_cycles,
 [SYS_shmget]            sys_shmget,
 [SYS_shmat]             sys_shmat,
 [SYS_shmctl]            sys_shmctl,
@@ -164,7 +165,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgsnd]            sys_msgsnd,
 [SYS_msgrcv]            sys_msgrcv,
 [SYS_msgctl]            sys_msgctl,
-[SYS_ticks]             sys_ticks
 };
 
 static const char* syscallNames[] = 
@@ -204,7 +204,8 @@ static const char* syscallNames[] =
 [SYS_msgrcv]                "sys_msgrcv",
 [SYS_msgsnd]                "sys_msgsnd",
 [SYS_msgctl]                "sys_msgctl",
-[SYS_ticks]                 "sys_ticks"
+[SYS_ticks]                 "sys_ticks",
+[SYS_cycles]                "sys_cycles"
 };
 
 void

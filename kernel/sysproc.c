@@ -171,6 +171,14 @@ sys_ticks(void)
     return getticks();
 }
 
+extern uint64 init_cycles[NCPU];
+
+uint64
+sys_cycles(void)
+{
+    return r_time() - init_cycles[cpuid()];
+}
+
 uint64
 sys_shmget()
 {

@@ -279,6 +279,7 @@ r_mcounteren()
 }
 
 // machine-mode cycle counter
+// qemu默认的频率为10MHz
 static inline uint64
 r_time()
 {

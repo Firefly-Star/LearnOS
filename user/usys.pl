@@ -54,3 +54,4 @@ entry("msgsnd");
 entry("msgrcv");
 entry("msgctl");
 entry("ticks");
+entry("cycles");
