@@ -224,6 +224,24 @@ proc_freesem(struct proc* p)
     }
 }
 
+void
+proc_freemsq(struct proc* p)
+{
+    while(p->proc_msghead.next != NULL)
+    {
+        struct proc_msgblock* toremove = p->proc_msghead.next;
+        p->proc_msghead.next = toremove->next;
+        acquire(&toremove->msq->lk);
+        toremove->msq->ref_count -= 1;
+        if (toremove->msq->state == IPC_ZOMBIE && toremove->msq->ref_count == 0)
+        {
+            msq_reinit(toremove->msq);
+        }
+        release(&toremove->msq->lk);
+        kmfree(toremove, sizeof(struct proc_semblock));
+    }
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.

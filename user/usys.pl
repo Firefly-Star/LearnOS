@@ -52,3 +52,4 @@ entry("semctl");
 entry("msgget");
 entry("msgsnd");
 entry("msgrcv");
+entry("msgctl");

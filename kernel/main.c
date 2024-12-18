@@ -24,6 +24,7 @@ main()
         procinit();      // process table
         seminit();       // 信号量
         shminit();       // 共享内存
+        msqinit();       // 消息队列
         trapinit();      // trap vectors
         trapinithart();  // install kernel trap vector
         plicinit();      // set up interrupt controller

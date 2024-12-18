@@ -118,6 +118,7 @@ extern uint64 sys_set_priority(void);
 extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
+extern uint64 sys_msgctl(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -160,7 +161,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_semctl]            sys_semctl,
 [SYS_msgget]            sys_msgget,
 [SYS_msgsnd]            sys_msgsnd,
-[SYS_msgrcv]            sys_msgrcv
+[SYS_msgrcv]            sys_msgrcv,
+[SYS_msgctl]            sys_msgctl,
 };
 
 static const char* syscallNames[] = 
@@ -198,7 +200,8 @@ static const char* syscallNames[] =
 [SYS_semop]                 "sys_semop",
 [SYS_semctl]                "sys_semctl",
 [SYS_msgrcv]                "sys_msgrcv",
-[SYS_msgsnd]                "sys_msgsnd"
+[SYS_msgsnd]                "sys_msgsnd",
+[SYS_msgctl]                "sys_msgctl",
 };
 
 void

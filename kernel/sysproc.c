@@ -299,3 +299,15 @@ sys_msgrcv(void)
     argaddr(4, &msgflg);
     return msgrcv((int)msqid, (struct msgbuf*)msgp, (uint32)msgsz, (uint32)msgtype, (int)msgflg);
 }
+
+uint64
+sys_msgctl(void)
+{
+    uint64 msqid;
+    uint64 cmd;
+    uint64 buf;
+    argaddr(0, &msqid);
+    argaddr(1, &cmd);
+    argaddr(2, &buf);
+    return msgctl((ipc_id)msqid, (int)(cmd), (struct msqid_ds*)(buf));
+}

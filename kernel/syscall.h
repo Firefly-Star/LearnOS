@@ -39,3 +39,4 @@
 #define SYS_msgget          37
 #define SYS_msgsnd          38
 #define SYS_msgrcv          39
+#define SYS_msgctl          40

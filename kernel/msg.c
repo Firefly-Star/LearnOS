@@ -12,7 +12,7 @@ AT_FUNC(msq, MSGMAX)
 // 接收阻塞队列的位置
 #define RCV_CHAN(msq) ((char*)(&(msq)) + 1)
 
-void msq_init()
+void msqinit()
 {
     for (int i = 0;i < MSGMAX; ++i)
     {
@@ -37,6 +37,7 @@ void msg_msg_destruct(struct msg_msg* msg)
 void msq_reinit(struct msg_queue* msq)
 {
     ASSERT(msq->ref_count == 0 && msq->state == IPC_ZOMBIE, "msq_reinit");
+    printf("msq destructed.\n");
     while(msq->first != NULL)
     {
         struct msg_msg* todestruct = msq->first;
@@ -59,6 +60,29 @@ void proc_addmsq(struct proc* p, struct msg_queue* msq, uint flag)
     newnode->next = p->proc_msghead.next;
     newnode->msq = msq;
     p->proc_msghead.next = newnode;
+}
+
+int proc_remmsq(struct proc* p, struct msg_queue* b)
+{
+    struct proc_msgblock* prev = &(p->proc_msghead);
+    while(prev->next != NULL && prev->next->msq != b)
+    {
+        prev = prev->next;
+    }
+    if (prev->next == NULL)
+    {
+        return -1;
+    }
+    struct proc_msgblock* toremove = prev->next;
+    ASSERT(toremove->msq == b, "proc_remmsq");
+    prev->next = toremove->next;
+    toremove->msq->ref_count -= 1;
+    if (toremove->msq->state == IPC_ZOMBIE && toremove->msq->ref_count == 0)
+    {
+        msq_reinit(b);
+    }
+    kmfree(toremove, sizeof(struct proc_semblock));
+    return 0;
 }
 
 void init_procmsgblock(struct proc_msgblock* b)
@@ -308,5 +332,41 @@ int msgctl(ipc_id msqid, int cmd, struct msqid_ds* buf)
         return -2; // 无效的msqid;
     }
 
+    struct proc* p = myproc();
+
+    switch (cmd)
+    {
+        case IPC_STAT:
+        {
+            struct msqid_ds t;
+            t.msg_count = msqid_pool[msqid].msg_count;
+            t.maxlen = msqid_pool[msqid].maxlen;
+            t.ref_count = msqid_pool[msqid].ref_count;
+            t.state = msqid_pool[msqid].state;
+            t.flag = msqid_pool[msqid].flag;
+            copyout(p->pagetable, (uint64)buf, (char*)(&t), sizeof(struct msqid_ds));
+            break;
+        }
+        case IPC_SET:
+        {
+            struct msqid_ds t;
+            copyin(p->pagetable, (char*)(&t), (uint64)(buf), sizeof(struct msqid_ds));
+            msqid_pool[msqid].maxlen = t.maxlen;
+            msqid_pool[msqid].flag = t.flag;
+            break;
+        }
+        case IPC_RMID:
+        {
+            msqid_pool[msqid].state = IPC_ZOMBIE;
+            proc_remmsq(p, msqid_pool + msqid);
+            break;
+        }
+        default:
+        {
+            release(&msqid_pool[msqid].lk);
+            return -3; // 未知的指令
+        }
+    }
+    release(&msqid_pool[msqid].lk);
     return 0;
 }

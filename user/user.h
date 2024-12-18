@@ -5,6 +5,8 @@
 struct stat;
 struct timeVal;
 
+#define NULL 0
+
 // system calls
 int fork(void);
 int exit(int) __attribute__((noreturn));
@@ -43,6 +45,7 @@ int semctl(int semid, int semnum, int cmd, union semun un);
 int msgget(key_t key, uint32 maxlen, uint32 flag);
 int msgsnd(ipc_id msqid, const struct msgbuf* msgp, int msgflg);
 int msgrcv(ipc_id msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg);
+int msgctl(ipc_id msqid, int cmd, struct msqid_ds* buf);
 
 // ulib.c
 int stat(const char*, struct stat*);

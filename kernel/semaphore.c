@@ -261,7 +261,6 @@ int semctl(int semid, int semnum, int cmd, uint64 arg) // 我可以信任你吗?
         {
             semid_pool[semid].state = IPC_ZOMBIE;
             proc_remsem(p, semid_pool + semid);
-            // TODO: 当引用计数为0时销毁
             break;
         }
         case IPC_STAT:
