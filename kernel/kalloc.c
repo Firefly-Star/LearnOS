@@ -34,6 +34,11 @@ struct run {
     struct run* next;
 };
 
+struct ref_stru {
+  struct spinlock lock;
+  int cnt[PHYSTOP / PGSIZE];  // 引用计数
+} ref;
+
 // 128MB的总物理内存，一页有4096B，也就是需要15位的位图来说明整体块的使用情况，刚好是一页的内存
 // 可以做的优化：链表变为双向链表，可以让buddy的释放复杂度变为近乎o(1)
 
@@ -47,6 +52,7 @@ struct {
     struct run freelist_page[MAX_ORDER + 1]; // 可以理解成一个地址数组，freelist_page[i]中存放的是i阶内存块的链表首地址
     char* start;
     struct spinlock lock;
+    struct ref_stru freelist; // 内存计数
 } buddy;
 
 void* pnum_to_pa(uint64 pnum)
@@ -115,6 +121,7 @@ void buddy_init(){
     release(&buddy.lock);
 }
 
+// 返回order阶的块地址
 void* buddy_getfirst(uint32 order) // 构式一样的取名
 {
     return buddy.freelist_page[order].next;
@@ -133,6 +140,7 @@ void buddy_insertfirst(void* newfirst, uint32 order)
     buddy_setbitmap(pa_to_pnum(newfirst), order, 0);
 }
 
+// 取一块空闲块
 void* buddy_erasefirst(uint32 order)
 {
     struct run* next = buddy.freelist_page[order].next;
@@ -225,6 +233,7 @@ void* buddy_alloc(uint32 order)
     if (order > MAX_ORDER)
         panic("buddy_alloc: order out of bound.");
     int free_order = order;
+    // 找到第一个空闲块
     while(free_order <= MAX_ORDER && (buddy_getfirst(free_order) == 0))
     {
         ++free_order;
@@ -242,7 +251,6 @@ void* buddy_alloc(uint32 order)
             --free_order;
             void* upper_block = (void*)((uint64)mem_block + (1 << free_order) * PGSIZE);
             buddy_insertfirst(upper_block, free_order); // 把地址相对较高的给存入链表中
-
         }
     }
     return mem_block;
@@ -300,25 +308,48 @@ printf(char *fmt, ...);
 void
 kinit()
 {
+    initlock(&ref.lock, "ref");
     buddy_init();
 }
 
 void
 kfree(void *pa)
 {
-    acquire(&buddy.lock);
-    buddy_free(pa, 0);
-    release(&buddy.lock);
+    if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP){
+        panic("kfree");
+    }
+
+    // 只有当引用计数为0了才回收空间
+    // 否则只是将引用计数减1
+    acquire(&ref.lock);
+    if(--ref.cnt[(uint64)pa / PGSIZE] == 0) {
+        release(&ref.lock);
+
+        // Fill with junk to catch dangling refs.
+        memset(pa, 1, PGSIZE);
+        
+        acquire(&buddy.lock);
+        buddy_free(pa, 0);
+        release(&buddy.lock);
+    } else {
+        release(&ref.lock);
+    }
+
 }
 
 void *
 kalloc(void)
 {
+    
     void* result;
 
     acquire(&buddy.lock);
     result = buddy_alloc(0);
     release(&buddy.lock);
+
+    acquire(&ref.lock);
+    ref.cnt[(uint64)result / PGSIZE] = 1;  // 将引用计数初始化为1
+    release(&ref.lock);
 
     memset(result, 0, PGSIZE);
 
@@ -343,4 +374,78 @@ kbuddy_free(void *pa, uint32 order)
     acquire(&buddy.lock);
     buddy_free(pa, order);
     release(&buddy.lock);
+}
+
+
+int cowpage(pagetable_t pagetable, uint64 va) {
+	if(va >= MAXVA)
+    	return -1;
+  	pte_t* pte = walk(pagetable, va, 0);
+  	if(pte == 0)
+    	return -1;
+  	if((*pte & PTE_V) == 0)
+    	return -1;
+  	if((*pte & PTE_F) == 0)
+    	return -1;
+  	return 0;
+}
+
+int krefcnt(void* pa) {
+  	return ref.cnt[(uint64)pa / PGSIZE];
+}
+
+void* cowalloc(pagetable_t pagetable, uint64 va) {
+	// 未对齐
+  	if(va % PGSIZE != 0){
+    	return 0;
+	}
+
+  	uint64 pa = walkaddr(pagetable, va);  // 获取对应的物理地址
+  	if(pa == 0){
+    	return 0;
+	}
+
+  	pte_t* pte = walk(pagetable, va, 0);  // 获取对应的PTE
+
+  	if(krefcnt((char*)pa) == 1) {
+   		// 只剩一个进程对此物理地址存在引用
+    	// 则直接修改对应的PTE即可
+    	*pte |= PTE_W;
+    	*pte &= ~PTE_F;
+    	return (void*)pa;
+  	} else {
+    	// 多个进程对物理内存存在引用
+    	// 需要分配新的页面，并拷贝旧页面的内容
+    	char* mem = kalloc();
+    	if(mem == 0)
+    	  return 0;
+
+    	// 复制旧页面内容到新页
+    	memmove(mem, (char*)pa, PGSIZE);
+
+    	// 清除PTE_V，否则在mappagges中会判定为remap
+    	*pte &= ~PTE_V;
+
+    	// 为新页面添加映射
+    	if(mappages(pagetable, va, PGSIZE, (uint64)mem, (PTE_FLAGS(*pte) | PTE_W) & ~PTE_F) != 0) {
+    	  	kfree(mem);
+    	  	*pte |= PTE_V;
+    	  	return 0;
+    	}
+
+    	// 将原来的物理内存引用计数减1
+    	kfree((char*)PGROUNDDOWN(pa));
+    	return mem;
+  	}
+}
+
+// 增加内存引用计数
+int kaddrefcnt(void* pa) {
+  	if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP){
+    	return -1;
+	}
+  	acquire(&ref.lock);
+  	++ref.cnt[(uint64)pa / PGSIZE];
+  	release(&ref.lock);
+  return 0;
 }
