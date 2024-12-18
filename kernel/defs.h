@@ -228,7 +228,8 @@ void            virtio_disk_intr(void);
 
 // time.c
 struct timeVal  _gettimeofday(void);
-void            timeinithart(void);
+void            cyclesinithart(void);
+uint64          getcycles(void);
 
 // trace.c
 void            _trace(uint64 mask);

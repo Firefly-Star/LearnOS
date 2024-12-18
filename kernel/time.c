@@ -20,7 +20,12 @@ struct timeVal _gettimeofday(void)
 
 uint64 init_cycles[NCPU];
 
-void timeinithart()
+void cyclesinithart()
 {
     init_cycles[cpuid()] = r_time();
+}
+
+uint64 getcycles()
+{
+    return r_time() - init_cycles[cpuid()];
 }

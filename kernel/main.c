@@ -29,7 +29,7 @@ main()
         trapinithart();  // install kernel trap vector
         plicinit();      // set up interrupt controller
         plicinithart();  // ask PLIC for device interrupts
-        timeinithart();  // 记录启动时的计时器周期数
+        cyclesinithart();// 记录启动时的计时器周期数
         binit();         // buffer cache
         iinit();         // inode table
         fileinit();      // file table
@@ -46,7 +46,7 @@ main()
         kvminithart();    // turn on paging
         trapinithart();   // install kernel trap vector
         plicinithart();   // ask PLIC for device interrupts
-        timeinithart();  // 记录启动时的计时器周期数
+        cyclesinithart();  // 记录启动时的计时器周期数
     }
     scheduler();        
 }
