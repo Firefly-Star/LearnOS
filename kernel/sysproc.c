@@ -275,3 +275,27 @@ sys_msgget(void)
     argaddr(2, &flag);
     return msgget(key, (uint32)maxlen, (uint32)(flag));
 }
+
+uint64
+sys_msgsnd(void)
+{
+    uint64 msqid;
+    uint64 msgp;
+    uint64 msgflg;
+    argaddr(0, &msqid);
+    argaddr(1, &msgp);
+    argaddr(2, &msgflg);
+    return msgsnd((int)msqid, (struct msgbuf*)(msgp), (int)(msgflg));
+}
+
+uint64
+sys_msgrcv(void)
+{
+    uint64 msqid, msgp, msgsz, msgtype, msgflg;
+    argaddr(0, &msqid);
+    argaddr(1, &msgp);
+    argaddr(2, &msgsz);
+    argaddr(3, &msgtype);
+    argaddr(4, &msgflg);
+    return msgrcv((int)msqid, (struct msgbuf*)msgp, (uint32)msgsz, (uint32)msgtype, (int)msgflg);
+}

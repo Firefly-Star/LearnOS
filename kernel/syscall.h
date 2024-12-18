@@ -37,3 +37,5 @@
 #define SYS_semop           35
 #define SYS_semctl          36
 #define SYS_msgget          37
+#define SYS_msgsnd          38
+#define SYS_msgrcv          39

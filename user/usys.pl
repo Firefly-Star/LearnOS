@@ -50,3 +50,5 @@ entry("semget");
 entry("semop");
 entry("semctl");
 entry("msgget");
+entry("msgsnd");
+entry("msgrcv");

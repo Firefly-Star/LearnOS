@@ -22,8 +22,8 @@ void msq_init()
         msqid_pool[i].last = NULL;
         msqid_pool[i].flag = 0;
         msqid_pool[i].key = 0;
-        msqid_pool[i].tlen = 0;
-        msqid_pool[i].maxlen = MSQSIZE_MAX;
+        msqid_pool[i].msg_count = 0;
+        msqid_pool[i].maxlen = MSQLEN_MAX;
         msqid_pool[i].ref_count = 0;
         msqid_pool[i].state = IPC_UNUSED;
     }
@@ -31,7 +31,6 @@ void msq_init()
 
 void msg_msg_destruct(struct msg_msg* msg)
 {
-    kmfree(msg->content.mtext, msg->content.length);
     kmfree(msg, sizeof(struct msg_msg));
 }
 
@@ -47,8 +46,8 @@ void msq_reinit(struct msg_queue* msq)
     msq->last = NULL;
     msq->flag = 0;
     msq->key = 0;
-    msq->tlen = 0;
-    msq->maxlen = MSQSIZE_MAX;
+    msq->msg_count = 0;
+    msq->maxlen = MSQLEN_MAX;
     msq->state = IPC_UNUSED;
 }
 
@@ -134,7 +133,7 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
     if (msqid_pool[msqid].state == IPC_UNUSED)
     {
         release(&msqid_pool[msqid].lk);
-        return -2; // 无效的semid;
+        return -2; // 无效的msqid;
     }
     release(&msqid_pool[msqid].lk);
 
@@ -148,7 +147,7 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
     }
 
     acquire(&msqid_pool[msqid].lk);
-    if ((msqid_pool[msqid].tlen + newmsg->content.length) > msqid_pool[msqid].maxlen)
+    if ((msqid_pool[msqid].msg_count) >= msqid_pool[msqid].maxlen)
     { // 消息队列长度过长
         if (msgflg & IPC_NOWAIT)
         { // 非阻塞，直接返回-1
@@ -161,13 +160,9 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
             do
             {
                 sleep(SND_CHAN(msqid_pool[msqid]), &msqid_pool[msqid].lk);
-            }while((msqid_pool[msqid].tlen + newmsg->content.length) > msqid_pool[msqid].maxlen);
+            }while((msqid_pool[msqid].msg_count) >= msqid_pool[msqid].maxlen);
         }
     }
-    char* newtext = (char*)(kmalloc(newmsg->content.length));
-    copyin(p->pagetable, newtext, (uint64)(newmsg->content.mtext), newmsg->content.length);
-    newmsg->content.mtext = newtext;
-
     if(msqid_pool[msqid].first == NULL)
     {
         msqid_pool[msqid].first = newmsg;
@@ -180,6 +175,7 @@ int msgsnd(int msqid, const struct msgbuf *msgp, int msgflg)
         msqid_pool[msqid].last = newmsg;
         newmsg->next = NULL;
     }
+    msqid_pool[msqid].msg_count += 1;
     release(&msqid_pool[msqid].lk);
     wakeup(RCV_CHAN(msqid_pool[msqid]));
     return 0;
@@ -204,6 +200,7 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
     { // 队列为空
         if(msgflg & IPC_NOWAIT)
         {
+            release(&msqid_pool[msqid].lk);
             return -1; // 无响应type的消息
         }
         else
@@ -238,6 +235,7 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
         { // 没找到
             if(msgflg & IPC_NOWAIT)
             {
+                release(&msqid_pool[msqid].lk);
                 return -1; // 无相应type的消息
             }
             else
@@ -250,13 +248,39 @@ int msgrcv(int msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msg
             break;
         }
     }
+    
+    struct proc* p = myproc();
+    struct msg_msg* wantednode = prev == NULL? msqid_pool[msqid].first : prev->next;
 
     if(prev == NULL)
     { // 队列的第一个消息是想要的
-        
+        if (msqid_pool[msqid].first == msqid_pool->last)
+        { // 队列中只有这一个
+            msqid_pool[msqid].first = NULL;
+            msqid_pool[msqid].last = NULL;
+        }
+        else
+        {
+            msqid_pool[msqid].first = msqid_pool[msqid].first->next;
+        }
     }
+    else
+    {
+        if (msqid_pool[msqid].last == prev->next)
+        { // 是最后一个
+            prev->next = prev->next->next;
+            msqid_pool[msqid].last = prev;
+        }
+        else
+        {
+            prev->next = prev->next->next;
+        }
+    }
+    msqid_pool[msqid].msg_count -= 1;
 
     release(&msqid_pool[msqid].lk);
-
+    copyout(p->pagetable, (uint64)(msgp), (char*)(&(wantednode->content)), MSGSIZE_MAX);    
+    msg_msg_destruct(wantednode);
+    wakeup(SND_CHAN(msqid_pool[msqid]));
     return 0;
 }

@@ -1,6 +1,7 @@
 #include "kernel/types.h"
 #include "kernel/semaphore.h"
 #include "kernel/shm.h"
+#include "kernel/msg.h"
 struct stat;
 struct timeVal;
 
@@ -40,6 +41,8 @@ int semget(key_t key, uint64 size, uint flag);
 int semop(int semid, struct sembuf* sops, uint nsops);
 int semctl(int semid, int semnum, int cmd, union semun un);
 int msgget(key_t key, uint32 maxlen, uint32 flag);
+int msgsnd(ipc_id msqid, const struct msgbuf* msgp, int msgflg);
+int msgrcv(ipc_id msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg);
 
 // ulib.c
 int stat(const char*, struct stat*);
