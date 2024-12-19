@@ -108,7 +108,6 @@ void buddy_init_bitmap()
 
 void buddy_init(){
     initlock(&buddy.lock, "buddy");
-    acquire(&buddy.lock);
 
     pa_start = (char*)PGROUNDUP((uint64)end);
     buddy.start = pa_start;
@@ -117,8 +116,6 @@ void buddy_init(){
 
     buddy_init_bitmap();
     buddy_init_freelist();
-
-    release(&buddy.lock);
 }
 
 // 返回order阶的块地址

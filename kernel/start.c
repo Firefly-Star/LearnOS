@@ -8,53 +8,53 @@ void main();
 void timerinit();
 
 // entry.S needs one stack per CPU.
-__attribute__ ((aligned (16))) char stack0[4096 * NCPU]; // ÎªÃ¿¸ö CPU ·ÖÅä 4096 ×Ö½ÚµÄÕ»
+__attribute__ ((aligned (16))) char stack0[4096 * NCPU]; // ä¸ºæ¯ä¸ª CPU åˆ†é… 4096 å­—èŠ‚çš„æ ˆ
 
 // entry.S jumps here in machine mode on stack0.
 void start() {
-    // ÉèÖÃ M Previous Privilege mode Îª Supervisor, ÓÃÓÚ mret¡£
+    // è®¾ç½® M Previous Privilege mode ä¸º Supervisor, ç”¨äº mretã€‚
     unsigned long x = r_mstatus();
-    x &= ~MSTATUS_MPP_MASK; // Çå³ı MPP Î»
-    x |= MSTATUS_MPP_S;     // ÉèÖÃÎª Supervisor Ä£Ê½
-    w_mstatus(x);          // Ğ´Èë MSTATUS ¼Ä´æÆ÷
+    x &= ~MSTATUS_MPP_MASK; // æ¸…é™¤ MPP ä½
+    x |= MSTATUS_MPP_S;     // è®¾ç½®ä¸º Supervisor æ¨¡å¼
+    w_mstatus(x);          // å†™å…¥ MSTATUS å¯„å­˜å™¨
 
-    // ÉèÖÃ M Exception Program Counter Îª main£¬×¼±¸ mret¡£
+    // è®¾ç½® M Exception Program Counter ä¸º mainï¼Œå‡†å¤‡ mretã€‚
     w_mepc((uint64)main);
 
-    // ÏÖÔÚ½ûÓÃ·ÖÒ³¡£
+    // ç°åœ¨ç¦ç”¨åˆ†é¡µã€‚
     w_satp(0);
 
-    // ½«ËùÓĞÖĞ¶ÏºÍÒì³£Î¯ÍĞ¸ø Supervisor Ä£Ê½¡£
+    // å°†æ‰€æœ‰ä¸­æ–­å’Œå¼‚å¸¸å§”æ‰˜ç»™ Supervisor æ¨¡å¼ã€‚
     w_medeleg(0xffff);
     w_mideleg(0xffff);
-    w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE); // Ê¹ÄÜ Supervisor Ä£Ê½ÏÂµÄÖĞ¶Ï
+    w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE); // ä½¿èƒ½ Supervisor æ¨¡å¼ä¸‹çš„ä¸­æ–­
 
-    // ÅäÖÃÎïÀíÄÚ´æ±£»¤£¬ÔÊĞí Supervisor Ä£Ê½·ÃÎÊËùÓĞÎïÀíÄÚ´æ¡£
+    // é…ç½®ç‰©ç†å†…å­˜ä¿æŠ¤ï¼Œå…è®¸ Supervisor æ¨¡å¼è®¿é—®æ‰€æœ‰ç‰©ç†å†…å­˜ã€‚
     w_pmpaddr0(0x3fffffffffffffull);
     w_pmpcfg0(0xf);
 
-    // ÇëÇóÊ±ÖÓÖĞ¶Ï¡£
+    // è¯·æ±‚æ—¶é’Ÿä¸­æ–­ã€‚
     timerinit();
 
-    // ½«Ã¿¸ö CPU µÄ hartid ´æ´¢ÔÚÆä tp ¼Ä´æÆ÷ÖĞ£¬ÒÔ¹© cpuid() Ê¹ÓÃ¡£
+    // å°†æ¯ä¸ª CPU çš„ hartid å­˜å‚¨åœ¨å…¶ tp å¯„å­˜å™¨ä¸­ï¼Œä»¥ä¾› cpuid() ä½¿ç”¨ã€‚
     int id = r_mhartid();
     w_tp(id);
 
-    // ÇĞ»»µ½ Supervisor Ä£Ê½²¢Ìø×ªµ½ main()¡£ 
+    // åˆ‡æ¢åˆ° Supervisor æ¨¡å¼å¹¶è·³è½¬åˆ° main()ã€‚ 
     asm volatile("mret");
 }
 
-// ÇëÇóÃ¿¸ö hart Éú³É¶¨Ê±Æ÷ÖĞ¶Ï¡£
+// è¯·æ±‚æ¯ä¸ª hart ç”Ÿæˆå®šæ—¶å™¨ä¸­æ–­ã€‚
 void timerinit() {
-    // ÆôÓÃ Supervisor Ä£Ê½ÏÂµÄ¶¨Ê±Æ÷ÖĞ¶Ï¡£
+    // å¯ç”¨ Supervisor æ¨¡å¼ä¸‹çš„å®šæ—¶å™¨ä¸­æ–­ã€‚
     w_mie(r_mie() | MIE_STIE);
     
-    // ÆôÓÃ sstc À©Õ¹£¨¼´ stimecmp£©¡£ÈÃ¼à¹ÜÄ£Ê½¿ÉÒÔ¸üºÃµØ¹ÜÀí¶¨Ê±Æ÷£¬°üÀ¨ÉèÖÃ¶¨Ê±Æ÷ÖĞ¶ÏµÈ£¬´Ó¶øÔÊĞí²Ù×÷ÏµÍ³¶ÔÊ±¼äÊÂ¼ş½øĞĞ´¦Àí¡£
+    // å¯ç”¨ sstc æ‰©å±•ï¼ˆå³ stimecmpï¼‰ã€‚è®©ç›‘ç®¡æ¨¡å¼å¯ä»¥æ›´å¥½åœ°ç®¡ç†å®šæ—¶å™¨ï¼ŒåŒ…æ‹¬è®¾ç½®å®šæ—¶å™¨ä¸­æ–­ç­‰ï¼Œä»è€Œå…è®¸æ“ä½œç³»ç»Ÿå¯¹æ—¶é—´äº‹ä»¶è¿›è¡Œå¤„ç†ã€‚
     w_menvcfg(r_menvcfg() | (1L << 63)); 
     
-    // ÔÊĞí Supervisor Ê¹ÓÃ stimecmp ºÍ time¡£Í¨¹ıÔÊĞí Supervisor Ê¹ÓÃ stimecmp ºÍ time£¬²Ù×÷ÏµÍ³ÄÜ¹»ÓĞĞ§µØÀûÓÃ¼ÆÊ±Æ÷½øĞĞÊ±¼ä¹ÜÀíºÍÊÂ¼şµ÷¶È¡£ÕâÒâÎ¶×ÅÄÜ¸ü·½±ãµØÊµÏÖ¶¨Ê±Æ÷ÖĞ¶Ï¡¢µ÷¶ÈµÈ¹¦ÄÜ£¬ÒÔ¸üºÃµØÖ§³Ö¶àÈÎÎñ»·¾³¡£
+    // å…è®¸ Supervisor ä½¿ç”¨ stimecmp å’Œ timeã€‚é€šè¿‡å…è®¸ Supervisor ä½¿ç”¨ stimecmp å’Œ timeï¼Œæ“ä½œç³»ç»Ÿèƒ½å¤Ÿæœ‰æ•ˆåœ°åˆ©ç”¨è®¡æ—¶å™¨è¿›è¡Œæ—¶é—´ç®¡ç†å’Œäº‹ä»¶è°ƒåº¦ã€‚è¿™æ„å‘³ç€èƒ½æ›´æ–¹ä¾¿åœ°å®ç°å®šæ—¶å™¨ä¸­æ–­ã€è°ƒåº¦ç­‰åŠŸèƒ½ï¼Œä»¥æ›´å¥½åœ°æ”¯æŒå¤šä»»åŠ¡ç¯å¢ƒã€‚
     w_mcounteren(r_mcounteren() | 2);
     
-    // ÇëÇóµÚÒ»´Î¶¨Ê±Æ÷ÖĞ¶Ï¡£
+    // è¯·æ±‚ç¬¬ä¸€æ¬¡å®šæ—¶å™¨ä¸­æ–­ã€‚
     w_stimecmp(r_time() + 1000000);
 }
