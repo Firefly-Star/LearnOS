@@ -28,6 +28,7 @@ struct kmem_cache{ // TODO: 对大对象的首个可用对象的地址进行独�
     uint16 size;
     uint16 align;
     uint16 unitsz;
+    uint64 alloc_count;
     union pagelink head;
     struct spinlock lock;
 };

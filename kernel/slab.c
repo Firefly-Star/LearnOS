@@ -22,6 +22,7 @@ struct kmem_cache g_slab_128;
 struct kmem_cache g_slab_256;
 struct kmem_cache g_slab_512;
 struct kmem_cache g_slab_1024;
+struct kmem_cache g_slab_2048;
 
 struct kmem_cache g_slab_kmem_cache;
 
@@ -172,6 +173,7 @@ void* alloc_small_object_pool(struct kmem_cache* cache)
         return alloc_small_object_pool(cache);
     }
     faptr->next = fa->next;
+    cache->alloc_count += 1;
     release(&cache->lock);
     return fa;
 }
@@ -193,6 +195,7 @@ void* alloc_large_object_pool(struct kmem_cache* cache)
         return alloc_large_object_pool(cache);
     }
     faptr->next = fa->next;
+    cache->alloc_count += 1;
     release(&cache->lock);
     return fa;
 }
@@ -219,6 +222,7 @@ void free_small_object_pool(struct kmem_cache* cache, void* pa)
     struct freeblock* faptr = (struct freeblock*)((char*)head + sizeof(struct snode)); // 第一个位置永远不会被分配，用来存储首个可用槽位
     ((struct freeblock*)(pa))->next = faptr->next;
     faptr->next = (struct freeblock*)(pa);
+    cache->alloc_count -= 1;
 }
 
 void free_large_object_pool(struct kmem_cache* cache, void* pa)
@@ -240,6 +244,7 @@ void free_large_object_pool(struct kmem_cache* cache, void* pa)
     struct freeblock* faptr = (struct freeblock*)(head->curpage);
     ((struct freeblock*)(pa))->next = faptr->next;
     faptr->next = (struct freeblock*)(pa);
+    cache->alloc_count -= 1;
 }
 
 void slab_init()
@@ -252,6 +257,7 @@ void slab_init()
     kmem_cache_create(&g_slab_256, "g_slab_256", 256, 256, 1);
     kmem_cache_create(&g_slab_512, "g_slab_512", 512, 512, 1);
     kmem_cache_create(&g_slab_1024, "g_slab_1024", 1024, 1024, 1);
+    kmem_cache_create(&g_slab_2048, "g_slab_2048", 2048, 2048, 1);
     kmem_cache_create(&g_slab_kmem_cache, "g_slab_kmem_cache", sizeof(struct kmem_cache), 8, 1);
 }
 
@@ -261,11 +267,11 @@ void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 a
         panic("kmem_cache_create: invalid alignment.");
 
     initlock(&(cache->lock), name);
-    acquire(&cache->lock);
 
     cache->size = sz;
     cache->align = align;
     cache->unitsz = ALIGN_UP(sz, align);
+    cache->alloc_count = 0;
     if (sz > 16)
     {
         cache->head.lhead = init_large_object_pool(cache->unitsz, init_pgnum);
@@ -275,13 +281,17 @@ void kmem_cache_create(struct kmem_cache* cache, char* name, uint16 sz, uint16 a
         cache->head.shead = init_small_object_pool(cache->unitsz, init_pgnum);
     }
 
-    release(&cache->lock);
     printf("%s initialized.\n", name);
 }
 
-void kmem_cache_destroy(struct kmem_cache* cache)
+void kmem_cache_destroy(struct kmem_cache* cache, int flag)
 {
     acquire(&cache->lock);
+    if (!flag && cache->alloc_count)
+    {
+        release(&cache->lock);
+        panic("kmem_cache_destroy.");
+    }
     if (cache->size > 16)
     {
         destroy_large_object_pool(cache);
