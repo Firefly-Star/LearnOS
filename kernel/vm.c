@@ -256,10 +256,10 @@ int uvlazyalloc(pagetable_t pagetable, uint64 va){
   va = PGROUNDDOWN(va);
 
   if (va > myproc()->sz) {
-    printf("va is greater than sz");
+    printf("va is greater than sz\n");
     return -1;
   }else if (va < myproc()->ustack_top){
-    printf("va is less than ustack_top");
+    printf("va is less than ustack_top\n");
     return -1;
   }
 
@@ -374,8 +374,17 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if((*pte & PTE_V) == 0)
       // panic("uvmcopy: page not present");
       continue;
+
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
+
+    // 仅对可写页面设置COW标记
+    if(flags & PTE_W) {
+      // 禁用写并设置COW Fork标记
+      flags = (flags | PTE_F) & ~PTE_W;
+      *pte = PA2PTE(pa) | flags;
+    }
+
     if((mem = kalloc()) == 0)
       goto err;
     memmove(mem, (char*)pa, PGSIZE);
@@ -383,6 +392,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       kfree(mem);
       goto err;
     }
+    // 增加内存的引用计数
+    kaddrefcnt((char*)pa);
   }
   return 0;
 

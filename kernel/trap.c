@@ -72,9 +72,19 @@ usertrap(void)
   } else if(r_scause() == 13 || r_scause() == 15){ // 加载页面与保存页面错误
     uint64 va;
     va = r_stval();
-    if (uvlazyalloc(p->pagetable, va) < 0) {
+    pte_t* pte = walk(p->pagetable, va, 0);
+
+    if ((*pte & PTE_V) == 0){
+      if (uvlazyalloc(p->pagetable, va) < 0) {
+        setkilled(p);
+      } 
+    }else if (*pte & PTE_F){
+      if (va >= p->sz || cowpage(p->pagetable, va) != 0 || cowalloc(p->pagetable, PGROUNDDOWN(va)) == 0){
+        setkilled(p);
+      }
+    }else {
       setkilled(p);
-    } 
+    }
     
   } else {
     // 错误则kill这个进程

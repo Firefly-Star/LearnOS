@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "ipc_hash.h"
+#include "riscv.h"
 
 #define ASSERT(x, info)\
 do\
@@ -80,6 +81,10 @@ void            kfree(void *);
 void            kinit(void);
 void*           kbuddy_alloc(uint32);
 void            kbuddy_free(void *, uint32);
+int             kaddrefcnt(void*);
+void*           cowalloc(pagetable_t, uint64);
+int             krefcnt(void*);
+int             cowpage(pagetable_t, uint64); 
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -94,7 +99,7 @@ int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
 // printf.c
-int            printf(char*, ...) __attribute__ ((format (printf, 1, 2)));
+int             printf(char*, ...) __attribute__ ((format (printf, 1, 2)));
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
