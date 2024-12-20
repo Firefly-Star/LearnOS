@@ -204,7 +204,7 @@ int semop(int semid, struct sembuf* sops, uint nsops)
             { // 资源不够用
                 insert_last(&sem->queue, p);
                 p->sem_want = (-buf[i].sem_op);
-                sleep(p, &semid_pool[semid].lk);
+                sleep((char*)p + 1, &semid_pool[semid].lk);
                 // 被唤醒后从这里继续运行
             }
             else
@@ -225,7 +225,7 @@ int semop(int semid, struct sembuf* sops, uint nsops)
                 }
                 else
                 {
-                    wakeup(firstsleep);
+                    wakeup((char*)firstsleep + 1);
                     sem->value -= firstsleep->sem_want;
                     firstsleep->sem_want = 0;
                     erase_first(&sem->queue);
