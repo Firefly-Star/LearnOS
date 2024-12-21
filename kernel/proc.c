@@ -382,6 +382,40 @@ growproc(int n)
   return 0;
 }
 
+void copy_sem(struct proc* old, struct proc* new)
+{
+    struct proc_semblock* workptr = old->proc_semhead.next;
+    while (workptr != NULL)
+    {
+        struct proc_semblock* newnode = (struct proc_semblock*)(kmalloc(sizeof(struct proc_semblock)));
+        newnode->flag = workptr->flag;
+        newnode->sem = workptr->sem;
+        acquire(&workptr->sem->lk);
+        workptr->sem->ref_count += 1;
+        release(&workptr->sem->lk);
+        newnode->next = new->proc_semhead.next;
+        new->proc_semhead.next = newnode;
+        workptr = workptr->next;
+    }
+}
+
+void copy_msg(struct proc* old, struct proc* new)
+{
+    struct proc_msgblock* workptr = old->proc_msghead.next;
+    while (workptr != NULL)
+    {
+        struct proc_msgblock* newnode = (struct proc_msgblock*)(kmalloc(sizeof(struct proc_msgblock)));
+        newnode->flag = workptr->flag;
+        newnode->msq = workptr->msq;
+        acquire(&workptr->msq->lk);
+        workptr->msq->ref_count += 1;
+        release(&workptr->msq->lk);
+        newnode->next = new->proc_msghead.next;
+        new->proc_msghead.next = newnode;
+        workptr = workptr->next;
+    }
+}
+
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int
@@ -405,6 +439,8 @@ fork(void)
     return -1;
   }
   uvmcopy_shm(p, np);
+  copy_sem(p, np);
+  copy_msg(p, np);
   np->sz = p->sz;
 
   // copy saved user registers.
@@ -464,8 +500,10 @@ int vfork()
     uvmunmap(np->pagetable, TRAPFRAME, 1, 0);
     mappages(np->pagetable, TRAPFRAME, PGSIZE, (uint64)(np->trapframe), PTE_R | PTE_W);
 
-    // 接管父进程的shm块
+    // 接管父进程的shm块, sem块, msg块
     np->proc_shmhead.next = p->proc_shmhead.next;
+    np->proc_semhead.next = p->proc_semhead.next;
+    np->proc_msghead.next = p->proc_msghead.next;
 
     // 接管父进程的shm地址管理块
     np->freeva_head->next = p->freeva_head->next;
@@ -552,11 +590,18 @@ exit(int status)
   // 如果是vfork出来的进程
   if(p->vforked)
   {
-    // 归还shm管理块和虚拟地址管理块
+    // 归还shm, sem, msg管理块和虚拟地址管理块
     p->parent->proc_shmhead.next = p->proc_shmhead.next;
+    p->parent->proc_semhead.next = p->proc_semhead.next;
+    p->parent->proc_msghead.next = p->proc_msghead.next;
+
+    p->proc_shmhead.next = NULL;
+    p->proc_semhead.next = NULL;
+    p->proc_msghead.next = NULL;
+
     p->parent->freeva_head->next = p->freeva_head->next;
     p->freeva_head->next = NULL;
-    p->proc_shmhead.next = NULL;
+    
     // 归还trapframe
     uvmunmap(p->pagetable, TRAPFRAME, 1, 0);
     mappages(p->pagetable, TRAPFRAME, PGSIZE, (uint64)(p->parent->trapframe), PTE_W | PTE_R);
