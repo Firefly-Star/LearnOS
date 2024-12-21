@@ -55,10 +55,7 @@ RUN wget https://download.qemu.org/qemu-7.2.0.tar.xz && \
     rm -rf qemu-7.2.0 qemu-7.2.0.tar.xz
 
 # 设置工作目录
-WORKDIR /learnos
-
-# 挂载卷（仅在容器运行时可用）
-VOLUME ["/learnos"]
+WORKDIR /root/learnos
 
 # 默认启动命令
 CMD ["bash"]

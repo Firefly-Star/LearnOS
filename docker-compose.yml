@@ -1,9 +1,0 @@
-services:
-  xv6-riscv:
-    build:
-      context: .
-      dockerfile: dockerfile
-    container_name: xv6-riscv-env
-    volumes:
-      - .:/learnos
-    tty: true

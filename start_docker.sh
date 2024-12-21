@@ -1,7 +1,1 @@
-docker compose up -d
-
-container_id=$(docker ps -qf "name=xv6-riscv-env")
-
-echo container_id: $container_id
-
-docker exec -it "$container_id" bash
+docker run -it --rm -v .:/root/learnos firefly120099/xv6-riscv:latest
