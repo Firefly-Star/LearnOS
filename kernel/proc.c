@@ -254,6 +254,7 @@ freeproc(struct proc *p)
   if(p->pagetable)
   {
     proc_freesem(p);
+    proc_freemsq(p);
     if (!p->vforked)
     { // 非vfork出来的进程
         // 清理共享内存引用计数
