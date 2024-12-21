@@ -202,6 +202,10 @@ int semop(int semid, struct sembuf* sops, uint nsops)
         { // wait
             if (sem->value < (-buf[i].sem_op))
             { // 资源不够用
+                if(buf[i].sem_flg & IPC_NOWAIT)
+                {
+                    return -4; // 非阻塞式，直接返回
+                }
                 insert_last(&sem->queue, p);
                 p->sem_want = (-buf[i].sem_op);
                 sleep((char*)p + 1, &semid_pool[semid].lk);
