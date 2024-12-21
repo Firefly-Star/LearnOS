@@ -1,8 +1,6 @@
 # 基础镜像
 FROM ubuntu:22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
 ENV RISCV=/opt/riscv
