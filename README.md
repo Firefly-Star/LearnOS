@@ -45,17 +45,11 @@
 
 主要改进和提升体现在**内存管理模块**，**进程通信模块**，**进程管理模块**。
 
-### 内存管理模块
-
-实现了 `伙伴系统`，`slab`，`lazy allocation`，`copy on write`
-
-### 进程通信模块
-
-实现了 `信号量机制`，`消息队列`
-
-### 进程管理模块
-
-实现了 ，`优先级调度`，`vfork`
+<!-- 总结构图 -->
+<div align = center>
+<img width=700 src="doc/images/结构图.png">
+<p style="font-size: 12px">项目总体结构图</p>
+</div>
 
 ## 项目结构
 
