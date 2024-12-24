@@ -308,11 +308,11 @@ int msgrcv(ipc_id msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int 
 
     release(&msqid_pool[msqid].lk);
 
-    if (msgsz > 0 && msgsz < wantednode->content.length)
+    if (msgsz > 0 && msgsz < 496)
     {
-        memset(wantednode->content.mtext + msgsz, 0, wantednode->content.length - msgsz);
+        wantednode->content.mtext[msgsz] = '\0';
     }
-    copyout(p->pagetable, (uint64)(msgp), (char*)(&(wantednode->content)), MSGSIZE_MAX);    
+    copyout(p->pagetable, (uint64)(msgp), (char*)(&(wantednode->content)), MSGSIZE_MAX - sizeof(void*));    
     msg_msg_destruct(wantednode);
     wakeup(SND_CHAN(msqid_pool[msqid]));
     return 0;

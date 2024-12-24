@@ -59,6 +59,7 @@ void sem_reinit(struct semblock* b)
     b->key = 0;
     b->ptr = NULL;
     b->state = IPC_UNUSED;
+    printf("sem destructed.\n");
 }
 
 void seminit()

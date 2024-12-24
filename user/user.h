@@ -7,6 +7,17 @@ struct timeVal;
 
 #define NULL 0
 
+#define USER_ASSERT(x, info)\
+do\
+{\
+    if (!(x))\
+    {\
+        printf("user panic: %s\n", info);\
+        exit(-1);\
+    }\
+} while(0);
+
+
 // system calls
 int fork(void);
 int exit(int) __attribute__((noreturn));
@@ -70,3 +81,10 @@ void free(void*);
 
 // find.c
 void find(char*, char*); 
+
+// mutex.c
+typedef ipc_id mutex_id;
+mutex_id init_mutex(key_t key);
+int acquire_mutex(mutex_id mutexid);
+int release_mutex(mutex_id mutexid);
+void destruct_mutex(mutex_id mutexid);
