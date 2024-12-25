@@ -38,24 +38,25 @@ int main()
 
 #endif
 
-#if 0
+#if 1
 
 int main()
 {
-    //mutex_id mutex = init_mutex(42);
+    mutex_id mutex = init_mutex(42);
     if (fork())
     {
-        //acquire_mutex(mutex); // 用互斥锁进行临界区的保护
+        acquire_mutex(mutex); // 用互斥锁进行临界区的保护
         printf("parent output.\n");
-        //release_mutex(mutex);
+        release_mutex(mutex);
     }
     else
     {
-        //acquire_mutex(mutex); // 用互斥锁进行临界区的保护
+        acquire_mutex(mutex); // 用互斥锁进行临界区的保护
         printf("child output.\n");
-        //release_mutex(mutex);
+        release_mutex(mutex);
     }
     wait(NULL);
+    destruct_mutex(mutex); 
     exit(0);
 }
 
