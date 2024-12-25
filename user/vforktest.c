@@ -6,7 +6,7 @@ int main()
     int* p = (int*)(malloc(sizeof(int)));
     *p = 0;
     ipc_id sem = semget(44, 1, IPC_CREATE | 0x666);
-    if(fork())
+    if(vfork())
     {
         printf("parent data : %d, %d.\n", y, *p); // 预期结果为100, 200
         struct sembuf op;
