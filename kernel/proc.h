@@ -124,6 +124,15 @@ struct proc {
   struct proc_semblock proc_semhead;    // 进程引用的sem链表首指针
   struct proc_msgblock proc_msghead;    // 消息队列引用的msq链表首指针
   int priority;                         // 进程优先级
+  int preempable;                       // 是否可以被抢占
+  int mlqlevel;                           // 进程所在的多级队列号
+  uint64 createtime;
+  int runtime;
+  uint64 readytime;
+  uint64 sleeptime;
+  int nice;
+
+
   uint64 errno;
   int vforked;
   int sem_want;                 // 进程被sem阻塞前，所期望的资源数量

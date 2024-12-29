@@ -28,6 +28,116 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+
+
+// 用于实现多级队列调度算法
+struct MultiLevelQueue
+{
+  int priority;
+  struct procQueueNode* head;
+  struct procQueueNode* tail;
+  int runtime;
+};
+
+struct MultiLevelQueue mlqueue[NMLQ];
+
+void initMlq()
+{
+    for (int i = 0; i < NMLQ; i++)
+    {
+      mlqueue[i].priority = i+1;
+      mlqueue[i].head = NULL;
+      mlqueue[i].tail = mlqueue[i].head;
+      mlqueue[i].runtime = i+1;
+    }
+}
+
+int insertMlq(struct proc* p)
+{
+    struct procQueueNode* node = (struct procQueueNode*)kmalloc(sizeof(struct procQueueNode));
+    node->p = p;
+    node->next = NULL;
+    node->want = 0;
+    for (int i = 0; i < NMLQ; i++)
+    {
+      if (p->priority <= mlqueue[i].priority)
+      {
+        if (mlqueue[i].head == NULL)
+        {
+          mlqueue[i].head = node;
+          mlqueue[i].tail = node;
+        }
+        else
+        {
+          mlqueue[i].tail->next = node;
+          mlqueue[i].tail = node;
+        }
+        p->mlqlevel = i;
+        p->runtime = mlqueue[i].runtime;
+        return i;
+      }
+    }
+    return -1;
+}
+
+int insertMlqEnd(struct proc* p){
+  struct procQueueNode* node = (struct procQueueNode*)kmalloc(sizeof(struct procQueueNode));
+  node->p = p;
+  node->next = NULL;
+  node->want = 0;
+
+  if (p->mlqlevel < NMLQ){
+    p->mlqlevel++;
+  }
+
+  if (mlqueue[p->mlqlevel].head == NULL){
+    mlqueue[p->mlqlevel].head = node;
+    mlqueue[p->mlqlevel].tail = node;
+  }
+  else{
+    mlqueue[p->mlqlevel].tail->next = node;
+    mlqueue[p->mlqlevel].tail = node;
+  }
+  p->runtime = mlqueue[p->mlqlevel].runtime;
+  return p->mlqlevel;
+}
+
+void removeMlq(struct proc *p){
+  if(mlqueue[p->mlqlevel].head->p == p){
+    mlqueue[p->mlqlevel].head = NULL;
+    mlqueue[p->mlqlevel].tail = NULL;
+    return;
+  }
+  struct procQueueNode* node = mlqueue[p->mlqlevel].head;
+  while(node->next!=NULL){
+   if(node->next->p == p){
+    struct procQueueNode* temp = node->next;
+    node->next = node->next->next;
+    if(mlqueue[p->mlqlevel].tail == temp){
+      mlqueue[p->mlqlevel].tail = node;
+    }
+    kmfree(temp, sizeof(struct procQueueNode));
+    return;
+   }
+   node = node->next;
+  }
+  
+  printf("error: proc %d not in mlqueue.", p->pid);
+  return; 
+}
+
+// test function
+void printMlq(){
+  struct MultiLevelQueue *q;
+  for (q=mlqueue; q<&mlqueue[NMLQ]; q++){
+    struct procQueueNode *node = q->head;
+    while(node!=NULL){
+      printf("pid: %d, priority: %d, mlqlevel: %d, runtime: %d\n", node->p->pid, node->p->priority, node->p->mlqlevel, node->p->runtime);
+      node = node->next;
+    }
+  }
+}
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -135,6 +245,12 @@ found:
   p->state = USED;
 
   p->priority = 5;
+  p->preempable = 1;
+  p->createtime = ticks;
+  p->runtime = 0;
+  p->readytime = 0;
+  p->sleeptime = 0;
+  p->nice = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -263,6 +379,9 @@ freeproc(struct proc *p)
         proc_freepagetable(p->pagetable, p->sz);
     }
   }
+
+  removeMlq(p);
+
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -273,7 +392,14 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   p->traceMask = 0;
+
   p->priority = 0;
+  p->createtime = 0;
+  p->runtime = 0;
+  p->readytime = 0;
+  p->sleeptime = 0;
+  p->nice = 0;
+
   init_freeva(p->freeva_head);
   p->vforked = 0;
   p->sem_want = 0;
@@ -359,6 +485,8 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+
+  insertMlq(p);
 
   release(&p->lock);
 }
@@ -471,8 +599,10 @@ fork(void)
   release(&np->lock);
 
   acquire(&np->lock);
-  np->priority = 1;
+  np->priority = p->priority;
   release(&np->lock);
+
+  insertMlq(np);
 
   return pid;
 }
@@ -691,49 +821,76 @@ scheduler(void)
     // turned off; enable them to avoid a deadlock if all
     // processes are waiting.
     intr_on();
-    struct proc *pmax = 0;
+    // struct proc *pmax = 0;
     int found = 0;
 
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        if (!found || p->priority > pmax->priority){
-          if (found){
-            release(&pmax->lock);
-          }
-          pmax = p;
-          found = 1;
-        }else {
+    // for(p = proc; p < &proc[NPROC]; p++) {
+    //   acquire(&p->lock);
+    //   if(p->state == RUNNABLE) {
+    //     if (!found || p->priority > pmax->priority){
+    //       if (found){
+    //         release(&pmax->lock);
+    //       }
+    //       pmax = p;
+    //       found = 1;
+    //     }else {
+    //       release(&p->lock);
+    //     }
+    //   }else {
+    //     release(&p->lock);
+    //   }
+    // }
+
+    // if(found){
+    //   // Switch to chosen process.  It is the process's job
+    //   // to release its lock and then reacquire it
+    //   // before jumping back to us.
+    //   pmax->state = RUNNING;
+    //   c->proc = pmax;
+    //   // printf("pid %d, state %d, priority %d, runtime %d, readytime %d, sleeptime %d\n", pmax->pid, pmax->state, pmax->priority, (int)pmax->runtime, (int)pmax->readytime, (int)pmax->sleeptime);
+      
+    //   // swtch中会直接ret到p->context的ra中，即会在这里隐式地跳出函数，
+    //   // 直到下一次计时器中断后又回到这里继续进行循环。
+    //   swtch(&c->context, &pmax->context);
+    //   // Process is done running for now.
+    //   // It should have changed its p->state before coming back.
+    //   c->proc = 0;
+
+    //   release(&pmax->lock);
+    // }else {
+    //   // nothing to run; stop running on this core until an interrupt.
+    //   intr_on();
+    //   asm volatile("wfi");
+    // }
+
+    for (int i = 0; i < NMLQ; i++){
+      struct procQueueNode *node = mlqueue[i].head;
+      while (node != NULL)
+      {
+        p = node->p;
+        acquire(&p->lock);
+        if(p->state == RUNNABLE){
+          found=1;
+          p->state = RUNNING;
+          c->proc = p;
+          // printf("pid %d, priority %d, mlqlevel %d, runtime %d\n", p->pid, p->priority, p->mlqlevel, p->runtime);
+          swtch(&c->context, &p->context);
+          c->proc = 0;
+          release(&p->lock);
+        }else{
           release(&p->lock);
         }
-      }else {
-        release(&p->lock);
+        node = node->next;
       }
     }
-
-    if (found){
-      // Switch to chosen process.  It is the process's job
-      // to release its lock and then reacquire it
-      // before jumping back to us.
-      pmax->state = RUNNING;
-      c->proc = pmax;
-      // printf("pid: %d, priority: %d\n", p->pid, p->priority);
-
-      // swtch中会直接ret到p->context的ra中，即会在这里隐式地跳出函数，
-      // 直到下一次计时器中断后又回到这里继续进行循环。
-      swtch(&c->context, &pmax->context);
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
-
-      release(&pmax->lock);
-    }else {
+    if (!found) {
       // nothing to run; stop running on this core until an interrupt.
       intr_on();
       asm volatile("wfi");
     }
   }
 }
+
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
@@ -769,6 +926,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  insertMlqEnd(p);
   sched();
   release(&p->lock);
 }
@@ -954,15 +1112,59 @@ procdump(void)
 int set_priority(int pid, int priority)
 {
     struct proc *p=0;
-    for (p = proc; p < &proc[NPROC]; p++) {
-        if (p->pid == pid) {
+    // for (p = proc; p < &proc[NPROC]; p++) {
+    //     if (p->pid == pid) {
+    //       acquire(&p->lock);
+    //       p->priority = priority;
+    //       release(&p->lock);
+    //       return 0;
+    //     }
+    // }
+    struct MultiLevelQueue* q;
+    for (q = mlqueue; q<&mlqueue[NMLQ]; q++){
+      struct procQueueNode* node = q->head;
+      while(node!=NULL){
+        p = node->p;
+        if(p->pid == pid){
           acquire(&p->lock);
+          removeMlq(p);
           p->priority = priority;
+          insertMlq(p);
           release(&p->lock);
           return 0;
         }
+        node = node->next;
+      }
     }
 
     printf("cannot find process %d\n", pid);
     return -1;
 }
+
+void update_proc(){
+  struct proc *p;
+  for (p=proc; p<&proc[NPROC]; p++){
+    acquire(&p->lock);
+    int found = 0;
+    switch(p->state){
+      case RUNNING:
+        p->runtime++;
+        found=1;
+        break;
+      case SLEEPING:
+        p->sleeptime++;
+        found = 1;
+        break;
+      case RUNNABLE:
+        p->readytime++;
+        found=1;
+        break;
+      default:
+        break;
+    }
+    if (found){
+      p->nice = p->priority - p->runtime - p->sleeptime + p->readytime;
+    }
+    release(&p->lock);
+  }
+} 

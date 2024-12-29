@@ -157,7 +157,7 @@ UPROGS=\
 	$U/_shmtest\
 	$U/_semtest\
 	$U/_vforktest\
-	$U/_prio_sche_test\
+	$U/_sche_test\
 	$U/_msgtest\
 	$U/_ticks\
     $U/_cycles
