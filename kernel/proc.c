@@ -295,6 +295,14 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  p->priority = 5;
+  p->preempable = 1;
+  p->createtime = ticks;
+  p->runtime = 0;
+  p->readytime = 0;
+  p->sleeptime = 0;
+  p->nice = 0;
+
   // vfork的进程有自己的陷阱帧
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -665,6 +673,8 @@ int vfork()
     acquire(&np->lock);
     np->state = RUNNABLE;
     release(&np->lock);
+
+    insertMlq(np);
 
     acquire(&wait_lock);
     sleep(p, &wait_lock);
