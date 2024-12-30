@@ -134,7 +134,9 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             set_priority(int, int);
 void            update_proc(void);
-void            initMlq(void);
+void            initMlfq(void);
+void            printMlfq(void);
+int             chrt(int);
 
 // raw_kmalloc.c
 void            raw_kmalloc_init();

@@ -89,6 +89,7 @@ struct trapframe {
 };
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE, BLOCKED };
+enum schemethod { SCHED_FCFS, SCHED_RR, SCHED_MLFQ };
 
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t;

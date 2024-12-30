@@ -165,6 +165,21 @@ sys_set_priority(void)
   return set_priority(pid, pr);
 }
 
+void
+sys_printMlfq(void)
+{
+  return printMlfq();
+}
+
+int
+sys_chrt(void)
+{
+  uint64 type;
+  argaddr(0, &type);
+  return chrt(type);
+}
+
+
 uint64
 sys_ticks(void)
 {

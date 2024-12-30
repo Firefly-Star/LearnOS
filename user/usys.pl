@@ -41,6 +41,8 @@ entry("getyear");
 entry("gettimeofday");
 entry("trace");
 entry("set_priority");
+entry("chrt");
+entry("printMlfq");
 entry("shmget");
 entry("shmat");
 entry("shmdt");

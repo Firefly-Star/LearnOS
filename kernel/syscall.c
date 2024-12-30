@@ -115,6 +115,8 @@ extern uint64 sys_semget(void);
 extern uint64 sys_semop(void);
 extern uint64 sys_semctl(void);
 extern uint64 sys_set_priority(void);
+extern uint64 sys_printMlfq(void);
+extern uint64 sys_chrt(void);
 extern uint64 sys_ticks(void);
 extern uint64 sys_cycles(void);
 extern uint64 sys_msgget(void);
@@ -151,6 +153,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace]             sys_trace,
 [SYS_find]              sys_find,
 [SYS_set_priority]      sys_set_priority,
+[SYS_printMlfq]         sys_printMlfq,
+[SYS_chrt]              sys_chrt,
 [SYS_ticks]             sys_ticks,
 [SYS_cycles]            sys_cycles,
 [SYS_shmget]            sys_shmget,

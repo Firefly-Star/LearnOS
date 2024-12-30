@@ -28,10 +28,10 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+enum schemethod SCHE_METHOD = SCHED_MLFQ;
 
-
-// 用于实现多级队列调度算法
-struct MultiLevelQueue
+// 用于实现多级反馈队列调度算法
+struct MultiLevelFeedbackQueue
 {
   int priority;
   struct procQueueNode* head;
@@ -39,82 +39,86 @@ struct MultiLevelQueue
   int runtime;
 };
 
-struct MultiLevelQueue mlqueue[NMLQ];
+struct MultiLevelFeedbackQueue mlfqueue[NMLFQ];
 
-void initMlq()
+void initMlfq()
 {
-    for (int i = 0; i < NMLQ; i++)
+    for (int i = 0; i < NMLFQ; i++)
     {
-      mlqueue[i].priority = i+1;
-      mlqueue[i].head = NULL;
-      mlqueue[i].tail = mlqueue[i].head;
-      mlqueue[i].runtime = i+1;
+      mlfqueue[i].priority = 2*i+1;
+      mlfqueue[i].head = NULL;
+      mlfqueue[i].tail = mlfqueue[i].head;
+      mlfqueue[i].runtime = i+1;
     }
 }
 
-int insertMlq(struct proc* p)
-{
+int insertMlfq(struct proc* p){
     struct procQueueNode* node = (struct procQueueNode*)kmalloc(sizeof(struct procQueueNode));
     node->p = p;
     node->next = NULL;
     node->want = 0;
-    for (int i = 0; i < NMLQ; i++)
-    {
-      if (p->priority <= mlqueue[i].priority)
-      {
-        if (mlqueue[i].head == NULL)
-        {
-          mlqueue[i].head = node;
-          mlqueue[i].tail = node;
+
+    struct MultiLevelFeedbackQueue* q;
+    for (q = mlfqueue; q<&mlfqueue[NMLFQ]; q++){
+      if (p->priority <= q->priority){
+        if (q->head == NULL){
+          q->head = node;
+          q->tail = node;
         }
-        else
-        {
-          mlqueue[i].tail->next = node;
-          mlqueue[i].tail = node;
+        else{
+          q->tail->next = node;
+          q->tail = node;
         }
-        p->mlqlevel = i;
-        p->runtime = mlqueue[i].runtime;
-        return i;
+        p->mlqlevel = q - mlfqueue;
+        p->runtime = q->runtime;
+        return q - mlfqueue;
       }
     }
+    printf("error: proc %d priority %d too high.\n", p->pid, p->priority);
     return -1;
 }
 
-int insertMlqEnd(struct proc* p){
+int insertNextMlfqTail(struct proc* p){
   struct procQueueNode* node = (struct procQueueNode*)kmalloc(sizeof(struct procQueueNode));
   node->p = p;
   node->next = NULL;
   node->want = 0;
 
-  if (p->mlqlevel < NMLQ){
+  if (p->mlqlevel < NMLFQ-1){
     p->mlqlevel++;
   }
 
-  if (mlqueue[p->mlqlevel].head == NULL){
-    mlqueue[p->mlqlevel].head = node;
-    mlqueue[p->mlqlevel].tail = node;
+  if (mlfqueue[p->mlqlevel].head == NULL){
+    mlfqueue[p->mlqlevel].head = node;
+    mlfqueue[p->mlqlevel].tail = node;
   }
   else{
-    mlqueue[p->mlqlevel].tail->next = node;
-    mlqueue[p->mlqlevel].tail = node;
+    mlfqueue[p->mlqlevel].tail->next = node;
+    mlfqueue[p->mlqlevel].tail = node;
   }
-  p->runtime = mlqueue[p->mlqlevel].runtime;
+  p->runtime = mlfqueue[p->mlqlevel].runtime;
   return p->mlqlevel;
 }
 
-void removeMlq(struct proc *p){
-  if(mlqueue[p->mlqlevel].head->p == p){
-    mlqueue[p->mlqlevel].head = NULL;
-    mlqueue[p->mlqlevel].tail = NULL;
+void removeMlfq(struct proc *p){
+  struct procQueueNode* node = mlfqueue[p->mlqlevel].head;
+
+  if(node->p == p && node->next == NULL){ // 仅有一个节点
+    mlfqueue[p->mlqlevel].head = NULL;
+    mlfqueue[p->mlqlevel].tail = NULL;
+    return;
+  }else if(node->p == p) { // 头节点
+    mlfqueue[p->mlqlevel].head = node->next;
+    kmfree(node, sizeof(struct procQueueNode));
     return;
   }
-  struct procQueueNode* node = mlqueue[p->mlqlevel].head;
+
   while(node->next!=NULL){
    if(node->next->p == p){
     struct procQueueNode* temp = node->next;
     node->next = node->next->next;
-    if(mlqueue[p->mlqlevel].tail == temp){
-      mlqueue[p->mlqlevel].tail = node;
+    if(mlfqueue[p->mlqlevel].tail == temp){
+      mlfqueue[p->mlqlevel].tail = node;
     }
     kmfree(temp, sizeof(struct procQueueNode));
     return;
@@ -127,12 +131,21 @@ void removeMlq(struct proc *p){
 }
 
 // test function
-void printMlq(){
-  struct MultiLevelQueue *q;
-  for (q=mlqueue; q<&mlqueue[NMLQ]; q++){
+void printMlfq(){
+  struct MultiLevelFeedbackQueue *q;
+  printf("\n");
+  for (q=mlfqueue; q<&mlfqueue[NMLFQ]; q++){
     struct procQueueNode *node = q->head;
     while(node!=NULL){
-      printf("pid: %d, priority: %d, mlqlevel: %d, runtime: %d\n", node->p->pid, node->p->priority, node->p->mlqlevel, node->p->runtime);
+      if (node->p->pid == 1 || node->p->pid == 2){
+        node = node->next;
+        continue;
+      }
+      if (node->next != NULL){
+        printf("pid: %d, state: %d, priority: %d, mlqlevel: %d, runtime: %d, nextpid: %d\n", node->p->pid, node->p->state, node->p->priority, node->p->mlqlevel, node->p->runtime, node->next->p->pid);
+      }else {
+        printf("pid: %d, state: %d, priority: %d, mlqlevel: %d, runtime: %d\n", node->p->pid, node->p->state, node->p->priority, node->p->mlqlevel, node->p->runtime);
+      }
       node = node->next;
     }
   }
@@ -244,10 +257,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
-  p->priority = 5;
+  p->priority = 1;
   p->preempable = 1;
   p->createtime = ticks;
-  p->runtime = 0;
+  p->runtime = 1;
   p->readytime = 0;
   p->sleeptime = 0;
   p->nice = 0;
@@ -295,10 +308,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
-  p->priority = 5;
+  p->priority = 1;
   p->preempable = 1;
   p->createtime = ticks;
-  p->runtime = 0;
+  p->runtime = 1;
   p->readytime = 0;
   p->sleeptime = 0;
   p->nice = 0;
@@ -388,7 +401,9 @@ freeproc(struct proc *p)
     }
   }
 
-  removeMlq(p);
+  if(SCHE_METHOD == SCHED_MLFQ){
+    removeMlfq(p);
+  }
 
   p->pagetable = 0;
   p->sz = 0;
@@ -494,7 +509,7 @@ userinit(void)
 
   p->state = RUNNABLE;
 
-  insertMlq(p);
+  insertMlfq(p);
 
   release(&p->lock);
 }
@@ -610,7 +625,9 @@ fork(void)
   np->priority = p->priority;
   release(&np->lock);
 
-  insertMlq(np);
+  if(SCHE_METHOD == SCHED_MLFQ){
+    insertMlfq(np);
+  }
 
   return pid;
 }
@@ -674,7 +691,13 @@ int vfork()
     np->state = RUNNABLE;
     release(&np->lock);
 
-    insertMlq(np);
+    acquire(&np->lock);
+    np->priority = p->priority;
+    release(&np->lock);
+
+    if(SCHE_METHOD == SCHED_MLFQ){
+      insertMlfq(np);
+    }
 
     acquire(&wait_lock);
     sleep(p, &wait_lock);
@@ -834,70 +857,71 @@ scheduler(void)
     // struct proc *pmax = 0;
     int found = 0;
 
-    // for(p = proc; p < &proc[NPROC]; p++) {
-    //   acquire(&p->lock);
-    //   if(p->state == RUNNABLE) {
-    //     if (!found || p->priority > pmax->priority){
-    //       if (found){
-    //         release(&pmax->lock);
-    //       }
-    //       pmax = p;
-    //       found = 1;
-    //     }else {
-    //       release(&p->lock);
-    //     }
-    //   }else {
-    //     release(&p->lock);
-    //   }
-    // }
-
-    // if(found){
-    //   // Switch to chosen process.  It is the process's job
-    //   // to release its lock and then reacquire it
-    //   // before jumping back to us.
-    //   pmax->state = RUNNING;
-    //   c->proc = pmax;
-    //   // printf("pid %d, state %d, priority %d, runtime %d, readytime %d, sleeptime %d\n", pmax->pid, pmax->state, pmax->priority, (int)pmax->runtime, (int)pmax->readytime, (int)pmax->sleeptime);
-      
-    //   // swtch中会直接ret到p->context的ra中，即会在这里隐式地跳出函数，
-    //   // 直到下一次计时器中断后又回到这里继续进行循环。
-    //   swtch(&c->context, &pmax->context);
-    //   // Process is done running for now.
-    //   // It should have changed its p->state before coming back.
-    //   c->proc = 0;
-
-    //   release(&pmax->lock);
-    // }else {
-    //   // nothing to run; stop running on this core until an interrupt.
-    //   intr_on();
-    //   asm volatile("wfi");
-    // }
-
-    for (int i = 0; i < NMLQ; i++){
-      struct procQueueNode *node = mlqueue[i].head;
-      while (node != NULL)
-      {
-        p = node->p;
+    switch(SCHE_METHOD){
+      case SCHED_FCFS:
+        goto fcfs;
+        break;
+      case SCHED_RR:
+        goto rr;
+        break;
+      case SCHED_MLFQ:
+        goto mlfq;
+        break;
+      default:
+        panic("scheduler: unknown scheduling method");
+    }
+    fcfs:{
+      panic("TODO: fcfs\n");
+    }
+    rr:{
+      for(p = proc; p < &proc[NPROC]; p++) {
         acquire(&p->lock);
-        if(p->state == RUNNABLE){
-          found=1;
+        if(p->state == RUNNABLE) {
+
           p->state = RUNNING;
           c->proc = p;
-          // printf("pid %d, priority %d, mlqlevel %d, runtime %d\n", p->pid, p->priority, p->mlqlevel, p->runtime);
           swtch(&c->context, &p->context);
+
           c->proc = 0;
-          release(&p->lock);
-        }else{
-          release(&p->lock);
+          found = 1;
         }
-        node = node->next;
+        release(&p->lock);
+      }
+      if(!found) {
+        // nothing to run; stop running on this core until an interrupt.
+        intr_on();
+        asm volatile("wfi");
       }
     }
-    if (!found) {
-      // nothing to run; stop running on this core until an interrupt.
-      intr_on();
-      asm volatile("wfi");
+    mlfq:{
+      for (int i = 0; i < NMLFQ; i++){
+        struct procQueueNode *node = mlfqueue[i].head;
+        while (node != NULL)
+        {
+          p = node->p;
+          struct procQueueNode* next = node->next; // 防止更新队列后丢失下一个节点
+          acquire(&p->lock);
+          if(p->state == RUNNABLE){
+            found=1;
+            p->state = RUNNING;
+            c->proc = p;
+            // printf("pid %d, priority %d, mlqlevel %d, runtime %d\n", p->pid, p->priority, p->mlqlevel, p->runtime);
+            swtch(&c->context, &p->context);
+            c->proc = 0;
+            release(&p->lock);
+          }else{
+            release(&p->lock);
+          }
+          node = next;
+        }
+      }
+      if (!found) {
+        // nothing to run; stop running on this core until an interrupt.
+        intr_on();
+        asm volatile("wfi");
+      }
     }
+
   }
 }
 
@@ -936,7 +960,14 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  insertMlqEnd(p);
+  if (SCHE_METHOD == SCHED_RR){
+    p->runtime = 1;
+  }
+  else if (SCHE_METHOD == SCHED_MLFQ){
+    removeMlfq(p);
+    insertNextMlfqTail(p);
+    // printMlfq();
+  }
   sched();
   release(&p->lock);
 }
@@ -1130,25 +1161,75 @@ int set_priority(int pid, int priority)
     //       return 0;
     //     }
     // }
-    struct MultiLevelQueue* q;
-    for (q = mlqueue; q<&mlqueue[NMLQ]; q++){
-      struct procQueueNode* node = q->head;
-      while(node!=NULL){
-        p = node->p;
-        if(p->pid == pid){
+    if (SCHE_METHOD == SCHED_RR){
+      for (p = proc; p < &proc[NPROC]; p++) {
+        if (p->pid == pid) {
           acquire(&p->lock);
-          removeMlq(p);
           p->priority = priority;
-          insertMlq(p);
           release(&p->lock);
           return 0;
         }
-        node = node->next;
+      }
+    }else if(SCHE_METHOD == SCHED_MLFQ){
+      struct MultiLevelFeedbackQueue* q;
+      for (q = mlfqueue; q<&mlfqueue[NMLFQ]; q++){
+        struct procQueueNode* node = q->head;
+        while(node!=NULL){
+          p = node->p;
+          if(p->pid == pid){
+            acquire(&p->lock);
+            removeMlfq(p);
+            p->priority = priority;
+            insertMlfq(p);
+            release(&p->lock);
+            return 0;
+          }
+          node = node->next;
+        }
       }
     }
 
     printf("cannot find process %d\n", pid);
     return -1;
+}
+
+int nice(){
+  // TODO:
+  return 0;
+}
+
+// 切换进程调度方案
+int chrt(int type){
+  switch (type) {
+    case SCHED_FCFS:  // 0
+      SCHE_METHOD = SCHED_FCFS;
+      break;
+    case SCHED_RR:  // 1
+      SCHE_METHOD = SCHED_RR;
+      break;
+    case SCHED_MLFQ:  // 2
+      SCHE_METHOD = SCHED_MLFQ;
+      break;
+    case -1:
+      switch(SCHE_METHOD){
+        case SCHED_FCFS:
+          printf("current scheduling method: SCHED_FCFS\n");
+          break;
+        case SCHED_RR:
+          printf("current scheduling method: SCHED_RR\n");
+          break;
+        case SCHED_MLFQ:
+          printf("current scheduling method: SCHED_MLFQ\n");
+          break;
+        default:
+          break;
+        }
+      break;
+    default:
+      printf("unkown scheduling method\n");
+      return -1;
+  }
+  return 0;
 }
 
 void update_proc(){

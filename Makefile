@@ -158,6 +158,7 @@ UPROGS=\
 	$U/_semtest\
 	$U/_vforktest\
 	$U/_sche_test\
+	$U/_chrt\
 	$U/_msgtest\
 	$U/_ticks\
     $U/_cycles
@@ -182,7 +183,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 3
+CPUS := 1
 endif
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic

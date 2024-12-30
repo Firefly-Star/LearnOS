@@ -2,9 +2,9 @@ services:
   xv6-riscv:
     build:
       context: .
-      dockerfile: linermao/xv6-riscv-env
-      # dockerfile: dockerfile
+      # dockerfile: linermao/xv6-riscv-env
+      dockerfile: dockerfile
     container_name: xv6-riscv-env
     volumes:
-      - .:/root/learnos
+      - .:/root/SupremeOS
     tty: true

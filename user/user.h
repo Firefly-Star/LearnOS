@@ -42,9 +42,11 @@ int sleep(int);
 int uptime(void);
 int getyear(void);
 int gettimeofday(struct timeVal*);
-int sleep(int); // added by LC
+int sleep(int); // 睡眠一段时间
 int trace(uint64); // mask of syscall to trace.
-int set_priority(int, int); // priority
+int set_priority(int, int); // 设置进程优先级
+void printMlfq(void); // 输出多级反馈队列的运行情况
+void chrt(int); // 切换调度算法
 uint ticks();
 uint64 cycles();
 int shmget(key_t key, uint64 size, int shmflg);

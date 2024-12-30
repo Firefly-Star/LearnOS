@@ -53,7 +53,7 @@ RUN wget https://download.qemu.org/qemu-7.2.0.tar.xz && \
     rm -rf qemu-7.2.0 qemu-7.2.0.tar.xz
 
 # 设置工作目录
-WORKDIR /root/learnos
+WORKDIR /root/SupremeOS
 
 # 默认启动命令
 CMD ["bash"]

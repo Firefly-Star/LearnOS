@@ -22,7 +22,7 @@ main()
         kvminithart();   // turn on paging
         slab_init();
         procinit();      // process table
-        initMlq();       // 多级队列
+        initMlfq();       // 多级反馈队列
         seminit();       // 信号量
         shminit();       // 共享内存
         msqinit();       // 消息队列

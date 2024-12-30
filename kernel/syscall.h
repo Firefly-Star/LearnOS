@@ -39,3 +39,5 @@
 #define SYS_msgsnd          38
 #define SYS_msgrcv          39
 #define SYS_msgctl          40
+#define SYS_printMlfq       41
+#define SYS_chrt            42
