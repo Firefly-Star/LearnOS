@@ -137,6 +137,7 @@ void            update_proc(void);
 void            initMlfq(void);
 void            printMlfq(void);
 int             chrt(int);
+void            neofetch(void);
 
 // raw_kmalloc.c
 void            raw_kmalloc_init();

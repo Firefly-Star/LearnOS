@@ -123,6 +123,7 @@ extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
 extern uint64 sys_msgctl(void);
+extern uint64 sys_neofetch(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -169,6 +170,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgsnd]            sys_msgsnd,
 [SYS_msgrcv]            sys_msgrcv,
 [SYS_msgctl]            sys_msgctl,
+[SYS_neofetch]          sys_neofetch,
 };
 
 static const char* syscallNames[] = 

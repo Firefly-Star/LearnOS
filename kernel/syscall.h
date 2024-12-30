@@ -41,3 +41,4 @@
 #define SYS_msgctl          40
 #define SYS_printMlfq       41
 #define SYS_chrt            42
+#define SYS_neofetch        43

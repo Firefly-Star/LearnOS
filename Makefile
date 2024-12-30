@@ -161,7 +161,8 @@ UPROGS=\
 	$U/_chrt\
 	$U/_msgtest\
 	$U/_ticks\
-    $U/_cycles
+    $U/_cycles\
+	$U/_neofetch
 
 fs.img: mkfs/mkfs README.md $(UPROGS)
 	mkfs/mkfs fs.img README.md $(UPROGS)

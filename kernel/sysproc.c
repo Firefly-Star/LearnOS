@@ -338,3 +338,9 @@ sys_msgctl(void)
     argaddr(2, &buf);
     return msgctl((ipc_id)msqid, (int)(cmd), (struct msqid_ds*)(buf));
 }
+
+void
+sys_neofetch(void)
+{
+	return neofetch();
+}

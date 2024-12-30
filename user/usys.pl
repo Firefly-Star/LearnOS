@@ -57,3 +57,4 @@ entry("msgrcv");
 entry("msgctl");
 entry("ticks");
 entry("cycles");
+entry("neofetch");

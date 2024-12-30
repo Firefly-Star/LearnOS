@@ -1259,3 +1259,42 @@ void update_proc(){
     release(&p->lock);
   }
 } 
+
+void neofetch(){
+  printf("Welcome to the SupremeOS!\n");
+
+  printf("\n");
+  printf("  █████████                                                                         ███████     █████████ \n");
+  printf(" ███░░░░░███                                                                      ███░░░░░███  ███░░░░░███\n");
+  printf("░███    ░░░  █████ ████ ████████  ████████   ██████  █████████████    ██████     ███     ░░███░███    ░░░ \n");
+  printf("░░█████████ ░░███ ░███ ░░███░░███░░███░░███ ███░░███░░███░░███░░███  ███░░███   ░███      ░███░░█████████ \n");
+  printf(" ░░░░░░░░███ ░███ ░███  ░███ ░███ ░███ ░░░ ░███████  ░███ ░███ ░███ ░███████    ░███      ░███ ░░░░░░░░███\n");
+  printf(" ███    ░███ ░███ ░███  ░███ ░███ ░███     ░███░░░   ░███ ░███ ░███ ░███░░░     ░░███     ███  ███    ░███\n");
+  printf("░░█████████  ░░████████ ░███████  █████    ░░██████  █████░███ █████░░██████     ░░░███████░  ░░█████████ \n");
+  printf(" ░░░░░░░░░    ░░░░░░░░  ░███░░░  ░░░░░      ░░░░░░  ░░░░░ ░░░ ░░░░░  ░░░░░░        ░░░░░░░     ░░░░░░░░░  \n");
+  printf("                        ░███                                                                              \n");
+  printf("                        █████                                                                             \n");
+  printf("                       ░░░░░                                                                              \n");
+  printf("\n");
+
+  printf("The version is: %s\n", "0.1");
+  printf("Made by: %s, %s\n", "wxz", "lc");
+
+  printf("Basic information:\n");
+  switch(SCHE_METHOD){
+  case SCHED_FCFS:
+    printf("current scheduling method: SCHED_FCFS\n");
+    break;
+  case SCHED_RR:
+    printf("current scheduling method: SCHED_RR\n");
+    break;
+  case SCHED_MLFQ:
+    printf("current scheduling method: SCHED_MLFQ\n");
+    break;
+  default:
+    break;
+  }
+
+  // TODO:
+  
+}

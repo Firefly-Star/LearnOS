@@ -61,6 +61,7 @@ int msgget(key_t key, uint32 maxlen, uint32 flag);
 int msgsnd(ipc_id msqid, const struct msgbuf* msgp, int msgflg);
 int msgrcv(ipc_id msqid, struct msgbuf* msgp, uint32 msgsz, uint32 msgtype, int msgflg);
 int msgctl(ipc_id msqid, int cmd, struct msqid_ds* buf);
+void neofetch(void);
 
 // ulib.c
 int stat(const char*, struct stat*);
