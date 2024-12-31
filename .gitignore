@@ -17,4 +17,4 @@ user/usys.S
 .cache/
 compile_commands.json
 .vscode/
-mkfs/
+mkfs/mkfs
