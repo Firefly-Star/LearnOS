@@ -7,7 +7,7 @@ main(int argc, char *argv[])
 { 
 
     if (argc!=2){
-        printf("useage: sche_test <forknumber>\n");
+        printf("usage: sche_test <forknumber>\n");
         exit(0);
     }
     int forknumber = atoi(argv[1]);
